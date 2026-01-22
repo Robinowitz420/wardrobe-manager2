@@ -196,6 +196,14 @@ button,
   transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
 }
 
+button[data-active="true"] {
+  outline: 4px solid red !important;
+  outline-offset: 2px;
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: white !important;
+}
+
 /* Focus states */
 *:focus-visible {
   outline: 2px solid hsl(var(--ring));

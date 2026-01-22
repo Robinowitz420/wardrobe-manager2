@@ -632,6 +632,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("garmentType")}
+                  data-active={editingSuggestion === "garmentType" ? "true" : "false"}
                   className={
                     editingSuggestion === "garmentType"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -645,6 +646,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("dominantColor")}
+                  data-active={editingSuggestion === "dominantColor" ? "true" : "false"}
                   className={
                     editingSuggestion === "dominantColor"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -658,6 +660,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("pattern")}
+                  data-active={editingSuggestion === "pattern" ? "true" : "false"}
                   className={
                     editingSuggestion === "pattern"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -671,6 +674,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("texture")}
+                  data-active={editingSuggestion === "texture" ? "true" : "false"}
                   className={
                     editingSuggestion === "texture"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -684,6 +688,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("silhouette")}
+                  data-active={editingSuggestion === "silhouette" ? "true" : "false"}
                   className={
                     editingSuggestion === "silhouette"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -697,6 +702,7 @@ export default function NewGarmentPage() {
                 <button
                   type="button"
                   onClick={() => setEditingSuggestion("length")}
+                  data-active={editingSuggestion === "length" ? "true" : "false"}
                   className={
                     editingSuggestion === "length"
                       ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
@@ -766,6 +772,7 @@ export default function NewGarmentPage() {
                               } as any,
                             }))
                           }
+                          data-active={active ? "true" : "false"}
                           className={
                             active
                               ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95"
