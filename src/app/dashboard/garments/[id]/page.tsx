@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 
-import { fetchGarmentById, getGarment } from "@/lib/storage/garments";
+import { fetchGarmentById, getGarment, updateGarment } from "@/lib/storage/garments";
 import type { Garment } from "@/lib/validations/garment";
 
 const CHANGE_EVENT = "wardrobe_manager_garments_changed";
@@ -15,6 +15,19 @@ export default function GarmentDetailPage() {
   const [garment, setGarment] = React.useState<Garment | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [reviewText, setReviewText] = React.useState("");
+  const [savingReview, setSavingReview] = React.useState(false);
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function newReviewId() {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return `rev_${crypto.randomUUID()}`;
+    }
+    return `rev_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+  }
 
   React.useEffect(() => {
     if (!params?.id) return;
@@ -109,6 +122,8 @@ export default function GarmentDetailPage() {
       ? "border-amber-300/60 bg-amber-50 text-amber-900"
       : "border-emerald-300/60 bg-emerald-50 text-emerald-900";
 
+  const reviews = Array.isArray((garment as any).reviews) ? ((garment as any).reviews as any[]) : [];
+
   return (
     <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -145,7 +160,7 @@ export default function GarmentDetailPage() {
           <div className="overflow-hidden rounded-2xl border border-border bg-muted">
             {primary ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={primary.src ?? primary.dataUrl} alt={garment.name} className="h-80 w-full object-cover" />
+              <img src={primary.src ?? primary.dataUrl} alt={garment.name} className="h-80 w-full object-contain" />
             ) : (
               <div className="flex h-80 items-center justify-center text-sm text-muted-foreground">
                 No photo
@@ -157,7 +172,7 @@ export default function GarmentDetailPage() {
             {garment.photos.slice(0, 4).map((p) => (
               <div key={p.id} className="overflow-hidden rounded-xl border border-border bg-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.src ?? p.dataUrl} alt={garment.name} className="h-16 w-full object-cover" />
+                <img src={p.src ?? p.dataUrl} alt={garment.name} className="h-16 w-full object-contain" />
               </div>
             ))}
           </div>
@@ -171,6 +186,9 @@ export default function GarmentDetailPage() {
               <div><span className="text-muted-foreground">Brand:</span> {garment.brand ? garment.brand : "—"}</div>
               <div><span className="text-muted-foreground">SKU:</span> {garment.sku ? garment.sku : "—"}</div>
               <div><span className="text-muted-foreground">State:</span> {garment.state}</div>
+              <div><span className="text-muted-foreground">Layer:</span> {(garment as any).layer ? String((garment as any).layer) : "—"}</div>
+              <div><span className="text-muted-foreground">Top/Bottom:</span> {(garment as any).position ? String((garment as any).position) : "—"}</div>
+              <div><span className="text-muted-foreground">Tier:</span> {Array.isArray(garment.tier) && garment.tier.length ? garment.tier.join(", ") : "—"}</div>
             </div>
           </section>
 
@@ -178,7 +196,7 @@ export default function GarmentDetailPage() {
             <div className="text-sm font-semibold">Size & fit</div>
             <div className="mt-3 grid gap-2 text-sm">
               <div><span className="text-muted-foreground">Size:</span> {garment.size ? garment.size : "—"}</div>
-              <div><span className="text-muted-foreground">Fit:</span> {garment.fit ? garment.fit : "—"}</div>
+              <div><span className="text-muted-foreground">Fit:</span> {Array.isArray(garment.fit) && garment.fit.length ? garment.fit.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Notes:</span> {garment.specialFitNotes ? garment.specialFitNotes : "—"}</div>
             </div>
           </section>
@@ -187,8 +205,93 @@ export default function GarmentDetailPage() {
             <div className="text-sm font-semibold">Material & care</div>
             <div className="mt-3 grid gap-2 text-sm">
               <div><span className="text-muted-foreground">Fabrics:</span> {garment.fabrics?.length ? garment.fabrics.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Care:</span> {garment.care ? garment.care : "—"}</div>
+              <div><span className="text-muted-foreground">Care:</span> {Array.isArray(garment.care) && garment.care.length ? garment.care.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Care notes:</span> {garment.careNotes ? garment.careNotes : "—"}</div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+            <div className="text-sm font-semibold">Aesthetic</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div><span className="text-muted-foreground">Colors:</span> {Array.isArray(garment.colors) && garment.colors.length ? garment.colors.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Tones:</span> {Array.isArray(garment.tones) && garment.tones.length ? garment.tones.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Vibes:</span> {Array.isArray(garment.vibes) && garment.vibes.length ? garment.vibes.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Pattern:</span> {Array.isArray(garment.pattern) && garment.pattern.length ? garment.pattern.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Texture:</span> {Array.isArray(garment.texture) && garment.texture.length ? garment.texture.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Silhouette:</span> {Array.isArray(garment.silhouette) && garment.silhouette.length ? garment.silhouette.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Length:</span> {Array.isArray(garment.length) && garment.length.length ? garment.length.join(", ") : "—"}</div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+            <div className="text-sm font-semibold">Construction</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div><span className="text-muted-foreground">Special features:</span> {Array.isArray(garment.specialFeatures) && garment.specialFeatures.length ? garment.specialFeatures.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Enclosures:</span> {Array.isArray(garment.enclosures) && garment.enclosures.length ? garment.enclosures.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Pockets:</span> {Array.isArray(garment.pockets) && garment.pockets.length ? garment.pockets.join(", ") : "—"}</div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+            <div className="text-sm font-semibold">Era</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div><span className="text-muted-foreground">Era:</span> {Array.isArray(garment.era) && garment.era.length ? garment.era.join(", ") : "—"}</div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-border bg-card p-5">
+            <div className="text-sm font-semibold">Reviews / Stories</div>
+
+            <div className="mt-3 grid gap-3">
+              <textarea
+                className="min-h-[92px] rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                placeholder="Add a note about how it wears, memories, compliments, warnings, etc."
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={savingReview || !reviewText.trim()}
+                  onClick={() => {
+                    if (!garment) return;
+                    const body = reviewText.trim();
+                    if (!body) return;
+                    setSavingReview(true);
+                    try {
+                      const nextEntry = { id: newReviewId(), body, createdAt: nowIso() };
+                      const updated = updateGarment(garment.id, {
+                        reviews: [...reviews, nextEntry] as any,
+                      } as any);
+                      if (updated) {
+                        setGarment(updated);
+                        setReviewText("");
+                      }
+                    } finally {
+                      setSavingReview(false);
+                    }
+                  }}
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                >
+                  {savingReview ? "Saving…" : "Add"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              {reviews.length ? (
+                reviews
+                  .slice()
+                  .reverse()
+                  .map((r: any) => (
+                    <div key={String(r?.id ?? Math.random())} className="rounded-xl border border-border bg-background p-3">
+                      <div className="text-xs text-muted-foreground">{typeof r?.createdAt === "string" ? r.createdAt : ""}</div>
+                      <div className="mt-1 whitespace-pre-wrap text-sm">{typeof r?.body === "string" ? r.body : ""}</div>
+                    </div>
+                  ))
+              ) : (
+                <div className="text-sm text-muted-foreground">No reviews yet.</div>
+              )}
             </div>
           </section>
 

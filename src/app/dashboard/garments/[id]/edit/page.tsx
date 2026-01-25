@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 
-import { INVENTORY_STATES, ITEM_TIERS } from "@/constants/garment";
+import { GARMENT_LAYERS, GARMENT_POSITIONS, INVENTORY_STATES, ITEM_TIERS } from "@/constants/garment";
 import { fetchGarmentById, generateSku, getGarment, updateGarment } from "@/lib/storage/garments";
 import type { Garment } from "@/lib/validations/garment";
 
@@ -18,6 +18,8 @@ export default function GarmentEditPage() {
   const [name, setName] = React.useState("");
   const [brand, setBrand] = React.useState("");
   const [state, setState] = React.useState<string>("");
+  const [layer, setLayer] = React.useState<string>("");
+  const [position, setPosition] = React.useState<string>("");
   const [tier, setTier] = React.useState<string>("");
   const [glitcoinBorrow, setGlitcoinBorrow] = React.useState<string>("");
   const [glitcoinLustLost, setGlitcoinLustLost] = React.useState<string>("");
@@ -37,7 +39,9 @@ export default function GarmentEditPage() {
       setName(found?.name ?? "");
       setBrand(found?.brand ?? "");
       setState(found?.state ?? "Available");
-      setTier(found?.tier ?? "");
+      setLayer(typeof (found as any)?.layer === "string" ? (found as any).layer : "");
+      setPosition(typeof (found as any)?.position === "string" ? (found as any).position : "");
+      setTier(Array.isArray(found?.tier) ? found!.tier.join(", ") : "");
       setGlitcoinBorrow(
         typeof found?.glitcoinBorrow === "number" ? String(found.glitcoinBorrow) : "",
       );
@@ -73,7 +77,15 @@ export default function GarmentEditPage() {
       name,
       brand,
       state: state as any,
-      tier: tier ? (tier as any) : undefined,
+      layer: layer.trim() ? (layer as any) : undefined,
+      position: position.trim() ? (position as any) : undefined,
+      tier:
+        tier.trim()
+          ? (tier
+              .split(",")
+              .map((x) => x.trim())
+              .filter(Boolean) as any)
+          : ([] as any),
       glitcoinBorrow: glitcoinBorrow === "" ? undefined : Number(glitcoinBorrow),
       glitcoinLustLost: glitcoinLustLost === "" ? undefined : Number(glitcoinLustLost),
       stories,
@@ -185,19 +197,45 @@ export default function GarmentEditPage() {
             </label>
 
             <label className="grid gap-1">
-              <span className="text-xs font-medium">Tier</span>
+              <span className="text-xs font-medium">Layer</span>
               <select
                 className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-                value={tier}
-                onChange={(e) => setTier(e.target.value)}
+                value={layer}
+                onChange={(e) => setLayer(e.target.value)}
               >
                 <option value="">—</option>
-                {ITEM_TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                {GARMENT_LAYERS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="grid gap-1">
+              <span className="text-xs font-medium">Top / Bottom</span>
+              <select
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+              >
+                <option value="">—</option>
+                {GARMENT_POSITIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1">
+              <span className="text-xs font-medium">Tier</span>
+              <input
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                value={tier}
+                onChange={(e) => setTier(e.target.value)}
+                placeholder="Comma-separated (e.g., Everyday, High Risk)"
+              />
             </label>
           </div>
 

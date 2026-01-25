@@ -24,6 +24,32 @@ async function fileToDataUrl(file: File) {
   });
 }
 
+function isHeicLike(file: File): boolean {
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".heic") || name.endsWith(".heif")) return true;
+  const t = (file.type || "").toLowerCase();
+  return t === "image/heic" || t === "image/heif" || t === "image/heic-sequence" || t === "image/heif-sequence";
+}
+
+async function normalizeImageFile(file: File): Promise<File> {
+  if (!isHeicLike(file)) return file;
+
+  try {
+    if (typeof window === "undefined") return file;
+    const mod = await import("heic2any");
+    const heic2any = mod.default as unknown as (args: any) => Promise<Blob | Blob[]>;
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    const baseName = (file.name || "photo").replace(/\.(heic|heif)$/i, "");
+    return new File([blob], `${baseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    return file;
+  }
+}
+
 async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fileName: string }>> {
   const form = new FormData();
   for (const f of files) form.append("files", f);
@@ -45,48 +71,39 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
   async function onPickFiles(files: FileList | null) {
     if (!files) return;
 
-    if (onBulkPick && files.length > 5) {
-      onBulkPick(Array.from(files));
+    if (onBulkPick && files.length > 1) {
+      const normalized = await Promise.all(Array.from(files).map((f) => normalizeImageFile(f)));
+      onBulkPick(normalized);
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    const existing = value.slice(0, 5);
-    const remaining = Math.max(0, 5 - existing.length);
-    const toAdd = Array.from(files).slice(0, remaining);
+    const first = Array.from(files)[0];
+    if (!first) return;
 
-    const added: GarmentPhoto[] = [];
+    const normalized = await normalizeImageFile(first);
+
+    let next: GarmentPhoto[] = [];
     try {
-      const uploaded = await uploadFilesToDisk(toAdd);
-      for (const u of uploaded) {
-        added.push({ id: newId(), src: u.src, isPrimary: false, fileName: u.fileName });
+      const uploaded = await uploadFilesToDisk([normalized]);
+      const u = uploaded[0];
+      if (u?.src && u?.fileName) {
+        next = [{ id: newId(), src: u.src, isPrimary: true, fileName: u.fileName }];
+      } else {
+        throw new Error("Upload failed");
       }
     } catch {
-      for (const f of toAdd) {
-        const dataUrl = await fileToDataUrl(f);
-        added.push({ id: newId(), dataUrl, isPrimary: false, fileName: f.name });
-      }
+      const dataUrl = await fileToDataUrl(normalized);
+      next = [{ id: newId(), dataUrl, isPrimary: true, fileName: normalized.name }];
     }
-
-    const merged = [...existing, ...added];
-    const hasPrimary = merged.some((p) => p.isPrimary);
-    const next = hasPrimary
-      ? merged
-      : merged.map((p, idx) => ({ ...p, isPrimary: idx === 0 }));
 
     onChange(next);
 
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  function setPrimary(id: string) {
-    onChange(value.map((p) => ({ ...p, isPrimary: p.id === id })));
-  }
-
   function remove(id: string) {
-    const next = value.filter((p) => p.id !== id);
-    const hasPrimary = next.some((p) => p.isPrimary);
-    onChange(hasPrimary ? next : next.map((p, idx) => ({ ...p, isPrimary: idx === 0 })));
+    onChange(value.filter((p) => p.id !== id));
   }
 
   function onDrop(e: React.DragEvent) {
@@ -99,7 +116,7 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <div className="text-base font-medium">Photos</div>
-          <div className="text-base text-muted-foreground">1–5 images. Mark one as primary.</div>
+          <div className="text-base text-muted-foreground">1 image per item. Select multiple photos to start bulk intake. HEIC/HEIF will be converted to JPEG.</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -115,7 +132,7 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         multiple
         className="hidden"
         onChange={(e) => void onPickFiles(e.target.files)}
@@ -130,22 +147,18 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
           Upload garment photos to begin.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+        <div className="space-y-2">
           {value.map((p) => (
             <div key={p.id} className="space-y-2">
-              <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
-                <img src={p.src ?? p.dataUrl ?? ""} alt="Garment" className="h-32 w-full object-cover" />
+              <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
+                <img src={p.src ?? p.dataUrl ?? ""} alt="Garment" className="h-full w-full object-contain" />
               </div>
               <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="primaryPhoto"
-                    checked={p.isPrimary}
-                    onChange={() => setPrimary(p.id)}
-                  />
-                  Primary
-                </label>
+                <div className="min-w-0 flex-1">
+                  {p.fileName ? (
+                    <div className="truncate text-[11px] text-muted-foreground">{p.fileName}</div>
+                  ) : null}
+                </div>
                 <button
                   type="button"
                   onClick={() => remove(p.id)}
@@ -154,9 +167,6 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
                   Remove
                 </button>
               </div>
-              {p.fileName ? (
-                <div className="truncate text-[11px] text-muted-foreground">{p.fileName}</div>
-              ) : null}
             </div>
           ))}
         </div>

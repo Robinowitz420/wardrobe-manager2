@@ -1,3 +1,4 @@
+import { GARMENT_LAYERS, GARMENT_POSITIONS } from "@/constants/garment";
 import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
 const STORAGE_KEY = "wardrobe_manager_garments_v1";
@@ -62,6 +63,98 @@ function normalizeLegacyGarment(raw: any): Garment {
   if (next?.state === "In Care / Repair") next.state = "In Care";
 
   if (next?.tier === "High-Risk") next.tier = "High Risk";
+
+  if (typeof next?.layer === "string" && next.layer.trim()) {
+    const v = next.layer.trim();
+    next.layer = (GARMENT_LAYERS as readonly string[]).includes(v) ? v : undefined;
+  } else {
+    next.layer = undefined;
+  }
+
+  if (typeof next?.position === "string" && next.position.trim()) {
+    const v = next.position.trim();
+    next.position = (GARMENT_POSITIONS as readonly string[]).includes(v) ? v : undefined;
+  } else {
+    next.position = undefined;
+  }
+
+  if (typeof next?.tier === "string" && next.tier.trim()) {
+    next.tier = [next.tier.trim()];
+  } else if (!Array.isArray(next?.tier)) {
+    next.tier = [];
+  }
+
+  if (typeof next?.fit === "string" && next.fit.trim()) {
+    next.fit = [next.fit.trim()];
+  } else if (!Array.isArray(next?.fit)) {
+    next.fit = [];
+  }
+
+  if (typeof next?.care === "string" && next.care.trim()) {
+    next.care = [next.care.trim()];
+  } else if (!Array.isArray(next?.care)) {
+    next.care = [];
+  }
+
+  if (typeof next?.pattern === "string" && next.pattern.trim()) {
+    next.pattern = [next.pattern.trim()];
+  } else if (!Array.isArray(next?.pattern)) {
+    next.pattern = [];
+  }
+
+  if (typeof next?.texture === "string" && next.texture.trim()) {
+    next.texture = [next.texture.trim()];
+  } else if (!Array.isArray(next?.texture)) {
+    next.texture = [];
+  }
+
+  if (typeof next?.silhouette === "string" && next.silhouette.trim()) {
+    next.silhouette = [next.silhouette.trim()];
+  } else if (!Array.isArray(next?.silhouette)) {
+    next.silhouette = [];
+  }
+
+  if (typeof next?.length === "string" && next.length.trim()) {
+    next.length = [next.length.trim()];
+  } else if (!Array.isArray(next?.length)) {
+    next.length = [];
+  }
+
+  if (typeof next?.pockets === "string" && next.pockets.trim()) {
+    next.pockets = [next.pockets.trim()];
+  } else if (!Array.isArray(next?.pockets)) {
+    next.pockets = [];
+  }
+
+  if (typeof next?.era === "string" && next.era.trim()) {
+    next.era = [next.era.trim()];
+  } else if (!Array.isArray(next?.era)) {
+    next.era = [];
+  }
+
+  if (typeof next?.specialFeatures === "string" && next.specialFeatures.trim()) {
+    next.specialFeatures = [next.specialFeatures.trim()];
+  } else if (!Array.isArray(next?.specialFeatures)) {
+    next.specialFeatures = [];
+  }
+
+  if (typeof next?.enclosures === "string" && next.enclosures.trim()) {
+    next.enclosures = [next.enclosures.trim()];
+  } else if (!Array.isArray(next?.enclosures)) {
+    next.enclosures = [];
+  }
+
+  if (typeof next?.reviews === "string" && next.reviews.trim()) {
+    next.reviews = [
+      {
+        id: `rev_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`,
+        body: next.reviews.trim(),
+        createdAt: nowIso(),
+      },
+    ];
+  } else if (!Array.isArray(next?.reviews)) {
+    next.reviews = [];
+  }
 
   if (next?.completionStatus !== "DRAFT" && next?.completionStatus !== "COMPLETE") {
     next.completionStatus = "COMPLETE";

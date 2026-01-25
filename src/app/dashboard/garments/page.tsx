@@ -64,7 +64,7 @@ export default function GarmentsIndexPage() {
                   <div className="h-20 w-16 overflow-hidden rounded-xl border border-border bg-muted">
                     {primary ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={primary.src ?? primary.dataUrl} alt={g.name} className="h-full w-full object-cover" />
+                      <img src={primary.src ?? primary.dataUrl} alt={g.name} className="h-full w-full object-contain" />
                     ) : null}
                   </div>
 
@@ -87,7 +87,7 @@ export default function GarmentsIndexPage() {
                       <span>•</span>
                       <span>Borrow: {typeof g.glitcoinBorrow === "number" ? `Ġ${g.glitcoinBorrow}` : "—"}</span>
                       <span>•</span>
-                      <span>Tier: {g.tier ?? "—"}</span>
+                      <span>Tier: {Array.isArray(g.tier) && g.tier.length ? g.tier.join(", ") : "—"}</span>
                     </div>
                   </div>
                 </div>

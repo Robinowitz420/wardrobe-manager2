@@ -6,14 +6,20 @@ import { useRouter } from "next/navigation";
 import {
   CARE_INSTRUCTIONS,
   COLORS,
+  ENCLOSURES,
+  ERAS,
   FABRICS,
   FITS,
   GARMENT_TYPES,
+  GARMENT_LAYERS,
+  GARMENT_POSITIONS,
   INVENTORY_STATES,
   ITEM_TIERS,
   LENGTHS,
   PATTERNS,
+  POCKETS,
   SILHOUETTES,
+  SPECIAL_FEATURES,
   TEXTURES,
   TONES,
   VIBES,
@@ -36,6 +42,56 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function blankGarmentForm(): GarmentCreateInput {
+  return {
+    state: "Available",
+    completionStatus: "COMPLETE",
+    photos: [],
+    suggested: {},
+
+    sku: "",
+    garmentType: "",
+    name: "",
+    brand: "",
+    dateAdded: nowIso().slice(0, 10),
+
+    layer: undefined,
+    position: undefined,
+
+    size: "",
+    fit: [],
+    specialFitNotes: "",
+
+    fabrics: [],
+    care: [],
+    careNotes: "",
+
+    vibes: [],
+    colors: [],
+    tones: [],
+    pattern: [],
+    texture: [],
+
+    silhouette: [],
+    length: [],
+
+    specialFeatures: [],
+    enclosures: [],
+    pockets: [],
+
+    era: [],
+    stories: "",
+
+    reviews: [],
+
+    glitcoinBorrow: undefined,
+    glitcoinLustLost: undefined,
+    tier: [],
+
+    internalNotes: "",
+  };
+}
+
 function newId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `${prefix}_${crypto.randomUUID()}`;
@@ -50,6 +106,32 @@ async function fileToDataUrl(file: File) {
     reader.onerror = () => reject(new Error("File read failed"));
     reader.readAsDataURL(file);
   });
+}
+
+function isHeicLike(file: File): boolean {
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".heic") || name.endsWith(".heif")) return true;
+  const t = (file.type || "").toLowerCase();
+  return t === "image/heic" || t === "image/heif" || t === "image/heic-sequence" || t === "image/heif-sequence";
+}
+
+async function normalizeImageFile(file: File): Promise<File> {
+  if (!isHeicLike(file)) return file;
+
+  try {
+    if (typeof window === "undefined") return file;
+    const mod = await import("heic2any");
+    const heic2any = mod.default as unknown as (args: any) => Promise<Blob | Blob[]>;
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    const baseName = (file.name || "photo").replace(/\.(heic|heif)$/i, "");
+    return new File([blob], `${baseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    return file;
+  }
 }
 
 async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fileName: string }>> {
@@ -111,48 +193,7 @@ export default function NewGarmentPage() {
 
   const [intakeQueue, setIntakeQueue] = React.useState<IntakeQueueState | null>(null);
 
-  const [form, setForm] = React.useState<GarmentCreateInput>({
-    state: "Available",
-    completionStatus: "COMPLETE",
-    photos: [],
-    suggested: {},
-
-    sku: "",
-    garmentType: "",
-    name: "",
-    brand: "",
-    dateAdded: nowIso().slice(0, 10),
-
-    size: "",
-    fit: undefined,
-    specialFitNotes: "",
-
-    fabrics: [],
-    care: undefined,
-    careNotes: "",
-
-    vibes: [],
-    colors: [],
-    tones: [],
-    pattern: undefined,
-    texture: undefined,
-
-    silhouette: "",
-    length: "",
-
-    specialFeatures: [],
-    enclosures: [],
-    pockets: undefined,
-
-    era: undefined,
-    stories: "",
-
-    glitcoinBorrow: undefined,
-    glitcoinLustLost: undefined,
-    tier: undefined,
-
-    internalNotes: "",
-  });
+  const [form, setForm] = React.useState<GarmentCreateInput>(() => blankGarmentForm());
 
   const isBulk = Boolean(intakeQueue && intakeQueue.items.length > 0);
   const bulkIndex = intakeQueue?.currentIndex ?? 0;
@@ -203,24 +244,38 @@ export default function NewGarmentPage() {
     };
   }, [editId]);
 
-  const primaryPhoto = React.useMemo(
-    () => form.photos.find((p) => p.isPrimary) ?? null,
-    [form.photos],
-  );
+  const primaryPhoto = React.useMemo(() => form.photos[0] ?? null, [form.photos]);
+
+  function onClear() {
+    setError(null);
+    setEditingSuggestion(null);
+    setVisionSuggesting(false);
+
+    if (typeof window !== "undefined") {
+      clearIntakeQueue();
+    }
+    setIntakeQueue(null);
+
+    setEditId(null);
+    setForm(blankGarmentForm());
+    router.replace("/dashboard/garments/new");
+  }
 
   async function beginBulkIntake(files: File[]) {
     setError(null);
     const items: Array<{ photos: any[]; formDraft: Partial<GarmentCreateInput> }> = [];
 
+    const normalizedFiles = await Promise.all(files.map((f) => normalizeImageFile(f)));
+
     let uploaded: Array<{ src: string; fileName: string }> = [];
     try {
-      uploaded = await uploadFilesToDisk(files);
+      uploaded = await uploadFilesToDisk(normalizedFiles);
     } catch {
       uploaded = [];
     }
 
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
+    for (let i = 0; i < normalizedFiles.length; i++) {
+      const f = normalizedFiles[i];
       const disk = uploaded[i];
       const photo = disk?.src
         ? { id: newId("p"), src: disk.src, isPrimary: true, fileName: disk.fileName }
@@ -269,21 +324,28 @@ export default function NewGarmentPage() {
     setForm((prev) => {
       const next: GarmentCreateInput = { ...prev };
 
+      const addToArray = (arr: string[], v: string | undefined) => {
+        if (!v) return arr;
+        if (arr.includes(v)) return arr;
+        return [...arr, v];
+      };
+
       if (prev.suggested.garmentType && !next.garmentType) {
         next.garmentType = prev.suggested.garmentType as any;
       }
-      if (prev.suggested.silhouette && !next.silhouette) {
-        next.silhouette = prev.suggested.silhouette as any;
+
+      if (Array.isArray(next.silhouette)) {
+        next.silhouette = addToArray(next.silhouette as any, prev.suggested.silhouette) as any;
       }
-      if (prev.suggested.length && !next.length) {
-        next.length = prev.suggested.length as any;
+      if (Array.isArray(next.length)) {
+        next.length = addToArray(next.length as any, prev.suggested.length) as any;
       }
 
-      if (prev.suggested.pattern && !next.pattern) {
-        next.pattern = prev.suggested.pattern as any;
+      if (Array.isArray(next.pattern)) {
+        next.pattern = addToArray(next.pattern as any, prev.suggested.pattern) as any;
       }
-      if (prev.suggested.texture && !next.texture) {
-        next.texture = prev.suggested.texture as any;
+      if (Array.isArray(next.texture)) {
+        next.texture = addToArray(next.texture as any, prev.suggested.texture) as any;
       }
 
       if (prev.suggested.dominantColor && Array.isArray(next.colors)) {
@@ -300,7 +362,7 @@ export default function NewGarmentPage() {
     setError(null);
 
     if (!primaryPhoto) {
-      setError("Upload at least one photo and mark a primary image.");
+      setError("Upload at least one photo.");
       return;
     }
 
@@ -395,12 +457,6 @@ export default function NewGarmentPage() {
         typeof form.garmentType === "string" && form.garmentType.trim()
           ? form.garmentType.trim()
           : undefined,
-      silhouette:
-        typeof form.silhouette === "string" && form.silhouette.trim()
-          ? form.silhouette.trim()
-          : undefined,
-      length:
-        typeof form.length === "string" && form.length.trim() ? form.length.trim() : undefined,
       name: nextName,
     };
 
@@ -443,12 +499,6 @@ export default function NewGarmentPage() {
         typeof form.garmentType === "string" && form.garmentType.trim()
           ? form.garmentType.trim()
           : undefined,
-      silhouette:
-        typeof form.silhouette === "string" && form.silhouette.trim()
-          ? form.silhouette.trim()
-          : undefined,
-      length:
-        typeof form.length === "string" && form.length.trim() ? form.length.trim() : undefined,
       name: nextName,
     };
 
@@ -519,14 +569,6 @@ export default function NewGarmentPage() {
         garmentType:
           typeof form.garmentType === "string" && form.garmentType.trim()
             ? form.garmentType.trim()
-            : undefined,
-        silhouette:
-          typeof form.silhouette === "string" && form.silhouette.trim()
-            ? form.silhouette.trim()
-            : undefined,
-        length:
-          typeof form.length === "string" && form.length.trim()
-            ? form.length.trim()
             : undefined,
         name: form.name.trim() ? form.name.trim() : "Untitled garment",
       };
@@ -837,6 +879,74 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
+                <span className="text-sm font-medium">Layer</span>
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setField("layer", undefined as any)}
+                    className={
+                      !form.layer
+                        ? "rounded-xl border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground shadow-sm"
+                        : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+                    }
+                  >
+                    —
+                  </button>
+                  {GARMENT_LAYERS.map((opt) => {
+                    const active = form.layer === opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setField("layer", opt as any)}
+                        className={
+                          active
+                            ? "rounded-xl border border-primary bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
+                            : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+                        }
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </label>
+
+              <label className="grid gap-1">
+                <span className="text-sm font-medium">Top / Bottom</span>
+                <div className="mt-1 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setField("position", undefined as any)}
+                    className={
+                      !form.position
+                        ? "rounded-xl border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground shadow-sm"
+                        : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+                    }
+                  >
+                    —
+                  </button>
+                  {GARMENT_POSITIONS.map((opt) => {
+                    const active = form.position === opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setField("position", opt as any)}
+                        className={
+                          active
+                            ? "rounded-xl border border-primary bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
+                            : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+                        }
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </label>
+
+              <label className="grid gap-1">
                 <span className="text-sm font-medium">Inventory state</span>
                 <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {INVENTORY_STATES.map((s) => {
@@ -870,52 +980,14 @@ export default function NewGarmentPage() {
 
               <label className="grid gap-1">
                 <span className="text-sm font-medium">Item tier</span>
-                <div className="mt-1 grid grid-cols-1 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setField("tier", undefined)}
-                    className={
-                      !form.tier
-                        ? "rounded-xl border border-rose-500 bg-rose-50 px-3 py-2 text-left text-sm font-semibold text-rose-900 shadow-sm dark:border-rose-400 dark:bg-rose-400/20 dark:text-rose-50"
-                        : "rounded-xl border border-border bg-background px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-muted"
-                    }
-                  >
-                    Unassigned
-                  </button>
-                  {ITEM_TIERS.map((t) => {
-                    const active = form.tier === t;
-                    const helper =
-                      t === "Everyday"
-                        ? "Easy wear, low stress"
-                        : t === "Statement"
-                          ? "Special but shareable"
-                          : t === "High Risk"
-                            ? "Fragile / rare / valuable"
-                            : "Emotionally irreplaceable";
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setField("tier", t as any)}
-                        className={
-                          active
-                            ? "rounded-xl border border-rose-500 bg-rose-50 px-3 py-2 text-left text-sm font-semibold text-rose-900 shadow-sm dark:border-rose-400 dark:bg-rose-400/20 dark:text-rose-50"
-                            : "rounded-xl border border-border bg-background px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-muted"
-                        }
-                      >
-                        <div>{t}</div>
-                        <div
-                          className={
-                            active
-                              ? "mt-0.5 text-xs opacity-90"
-                              : "mt-0.5 text-xs text-muted-foreground"
-                          }
-                        >
-                          {helper}
-                        </div>
-                      </button>
-                    );
-                  })}
+                <div className="mt-1">
+                  <MultiSelectChips
+                    label=""
+                    categoryKey="tier"
+                    options={ITEM_TIERS}
+                    value={form.tier as any}
+                    onChange={(next) => setField("tier", next as any)}
+                  />
                 </div>
               </label>
             </div>
@@ -933,20 +1005,15 @@ export default function NewGarmentPage() {
 
               <label className="grid gap-1">
                 <span className="text-sm font-medium">Fit</span>
-                <select
-                  className="h-10 rounded-xl border border-border bg-background px-3 text-base"
-                  value={form.fit ?? ""}
-                  onChange={(e) =>
-                    setField("fit", (e.target.value || undefined) as any)
-                  }
-                >
-                  <option value="">—</option>
-                  {FITS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <MultiSelectChips
+                    label=""
+                    categoryKey="fit"
+                    options={FITS}
+                    value={form.fit as any}
+                    onChange={(next) => setField("fit", next as any)}
+                  />
+                </div>
               </label>
 
               <label className="grid gap-1 sm:col-span-2">
@@ -981,24 +1048,15 @@ export default function NewGarmentPage() {
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="grid gap-1">
                     <span className="text-sm font-medium">Care instruction</span>
-                    <select
-                      className={
-                        form.care
-                          ? "h-10 rounded-xl border border-rose-500 bg-rose-50 px-3 text-base font-semibold text-rose-900 shadow-sm dark:border-rose-400 dark:bg-rose-400/20 dark:text-rose-50"
-                          : "h-10 rounded-xl border border-border bg-background px-3 text-base"
-                      }
-                      value={form.care ?? ""}
-                      onChange={(e) =>
-                        setField("care", (e.target.value || undefined) as any)
-                      }
-                    >
-                      <option value="">—</option>
-                      {CARE_INSTRUCTIONS.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-1">
+                      <MultiSelectChips
+                        label=""
+                        categoryKey="care"
+                        options={CARE_INSTRUCTIONS}
+                        value={form.care as any}
+                        onChange={(next) => setField("care", next as any)}
+                      />
+                    </div>
                   </label>
 
                   <label className="grid gap-1 sm:col-span-2">
@@ -1015,6 +1073,7 @@ export default function NewGarmentPage() {
                 <div className="mt-5">
                   <MultiSelectChips
                     label="Fabrics"
+                    categoryKey="fabrics"
                     options={FABRICS}
                     value={form.fabrics as any}
                     onChange={(next) => setField("fabrics", next as any)}
@@ -1025,9 +1084,10 @@ export default function NewGarmentPage() {
               <div className="rounded-xl border border-border bg-card p-4">
                 <MultiSelectChips
                   label="Confirmed colors"
+                  categoryKey="colors"
                   options={COLORS}
                   value={form.colors}
-                  onChange={(next) => setField("colors", (next as any).slice(0, 4))}
+                  onChange={(next) => setField("colors", next as any)}
                 />
                 <div className="mt-1 text-sm text-muted-foreground">Visually dominant colors.</div>
               </div>
@@ -1035,9 +1095,10 @@ export default function NewGarmentPage() {
               <div className="rounded-xl border border-border bg-card p-4">
                 <MultiSelectChips
                   label="Vibes"
+                  categoryKey="vibes"
                   options={VIBES}
                   value={form.vibes as any}
-                  onChange={(next) => setField("vibes", (next as any).slice(0, 3))}
+                  onChange={(next) => setField("vibes", next as any)}
                 />
                 <div className="mt-1 text-sm text-muted-foreground">How it feels when worn.</div>
               </div>
@@ -1045,11 +1106,92 @@ export default function NewGarmentPage() {
               <div className="rounded-xl border border-border bg-card p-4">
                 <MultiSelectChips
                   label="Tones"
+                  categoryKey="tones"
                   options={TONES}
                   value={form.tones as any}
-                  onChange={(next) => setField("tones", (next as any).slice(0, 2))}
+                  onChange={(next) => setField("tones", next as any)}
                 />
                 <div className="mt-1 text-sm text-muted-foreground">Overall contrast & mood.</div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Patterns"
+                  categoryKey="pattern"
+                  options={PATTERNS}
+                  value={form.pattern as any}
+                  onChange={(next) => setField("pattern", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Textures"
+                  categoryKey="texture"
+                  options={TEXTURES}
+                  value={form.texture as any}
+                  onChange={(next) => setField("texture", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Silhouettes"
+                  categoryKey="silhouette"
+                  options={SILHOUETTES}
+                  value={form.silhouette as any}
+                  onChange={(next) => setField("silhouette", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Lengths"
+                  categoryKey="length"
+                  options={LENGTHS}
+                  value={form.length as any}
+                  onChange={(next) => setField("length", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Pockets"
+                  categoryKey="pockets"
+                  options={POCKETS}
+                  value={form.pockets as any}
+                  onChange={(next) => setField("pockets", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Era"
+                  categoryKey="era"
+                  options={ERAS}
+                  value={form.era as any}
+                  onChange={(next) => setField("era", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Special features"
+                  categoryKey="specialFeatures"
+                  options={SPECIAL_FEATURES}
+                  value={form.specialFeatures as any}
+                  onChange={(next) => setField("specialFeatures", next as any)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Enclosures"
+                  categoryKey="enclosures"
+                  options={ENCLOSURES}
+                  value={form.enclosures as any}
+                  onChange={(next) => setField("enclosures", next as any)}
+                />
               </div>
             </div>
           </section>
@@ -1183,6 +1325,14 @@ export default function NewGarmentPage() {
             className="rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2"
           >
             Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onClear()}
+            disabled={saving}
+            className="rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2 disabled:opacity-60"
+          >
+            Clear
           </button>
           <button
             type="button"

@@ -32,6 +32,25 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_garments_updatedAt ON garments(updatedAt);
   `);
 
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS custom_options (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      value TEXT NOT NULL,
+      createdAt TEXT NOT NULL
+    );
+  `);
+
+  next.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_custom_options_category_value
+    ON custom_options(category, value COLLATE NOCASE);
+  `);
+
+  next.exec(`
+    CREATE INDEX IF NOT EXISTS idx_custom_options_category
+    ON custom_options(category);
+  `);
+
   db = next;
   return next;
 }

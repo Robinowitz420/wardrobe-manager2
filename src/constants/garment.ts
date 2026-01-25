@@ -7,6 +7,10 @@ export const INVENTORY_STATES = [
 
 export const ITEM_TIERS = ["Everyday", "Statement", "High Risk", "Sacred"] as const;
 
+export const GARMENT_LAYERS = ["Base", "Outer"] as const;
+
+export const GARMENT_POSITIONS = ["Top", "Bottom"] as const;
+
 export const GARMENT_CATEGORIES = [
   "Outerwear",
   "Top",
@@ -222,5 +226,7 @@ export const VIBES = [
 
 export type InventoryState = (typeof INVENTORY_STATES)[number];
 export type ItemTier = (typeof ITEM_TIERS)[number];
+export type GarmentLayer = (typeof GARMENT_LAYERS)[number];
+export type GarmentPosition = (typeof GARMENT_POSITIONS)[number];
 export type GarmentCategory = (typeof GARMENT_CATEGORIES)[number];
 export type GarmentType = (typeof GARMENT_TYPES)[number];

@@ -8,6 +8,8 @@ import {
   FABRICS,
   FITS,
   GARMENT_CATEGORIES,
+  GARMENT_LAYERS,
+  GARMENT_POSITIONS,
   GARMENT_TYPES,
   INVENTORY_STATES,
   ITEM_TIERS,
@@ -29,6 +31,12 @@ export const garmentPhotoSchema = z.object({
   fileName: z.string().optional(),
 }).refine((p) => Boolean(p.dataUrl || p.src), { message: "Photo must have dataUrl or src" });
 
+export const garmentReviewSchema = z.object({
+  id: z.string().min(1),
+  body: z.string().min(1),
+  createdAt: z.string().min(1),
+});
+
 export const garmentSchema = z.object({
   id: z.string().min(1),
   createdAt: z.string().min(1),
@@ -36,11 +44,14 @@ export const garmentSchema = z.object({
 
   state: z.enum(INVENTORY_STATES),
 
+  layer: z.enum(GARMENT_LAYERS).optional(),
+  position: z.enum(GARMENT_POSITIONS).optional(),
+
   completionStatus: z.enum(["DRAFT", "COMPLETE"]).default("COMPLETE"),
   intakeSessionId: z.string().min(1).optional(),
   intakeOrder: z.number().int().nonnegative().optional(),
 
-  photos: z.array(garmentPhotoSchema).min(1).max(5),
+  photos: z.array(garmentPhotoSchema).min(1).max(1),
 
   // Vision-assisted suggestions (always editable)
   suggested: z
@@ -66,37 +77,39 @@ export const garmentSchema = z.object({
 
   // Size & fit
   size: z.string().optional(),
-  fit: z.enum(FITS).optional(),
+  fit: z.array(z.string().min(1)).default([]),
   specialFitNotes: z.string().optional(),
 
   // Material & care (risk-critical: never inferred)
-  fabrics: z.array(z.enum(FABRICS)).default([]),
-  care: z.enum(CARE_INSTRUCTIONS).optional(),
+  fabrics: z.array(z.string().min(1)).default([]),
+  care: z.array(z.string().min(1)).default([]),
   careNotes: z.string().optional(),
 
   // Aesthetic metadata
-  vibes: z.array(z.enum(VIBES)).default([]),
-  colors: z.array(z.enum(COLORS)).default([]),
-  tones: z.array(z.enum(TONES)).default([]),
-  pattern: z.enum(PATTERNS).optional(),
-  texture: z.enum(TEXTURES).optional(),
+  vibes: z.array(z.string().min(1)).default([]),
+  colors: z.array(z.string().min(1)).default([]),
+  tones: z.array(z.string().min(1)).default([]),
+  pattern: z.array(z.string().min(1)).default([]),
+  texture: z.array(z.string().min(1)).default([]),
 
-  silhouette: z.string().min(1).optional(),
-  length: z.string().min(1).optional(),
+  silhouette: z.array(z.string().min(1)).default([]),
+  length: z.array(z.string().min(1)).default([]),
 
   // Construction details
-  specialFeatures: z.array(z.enum(SPECIAL_FEATURES)).default([]),
-  enclosures: z.array(z.enum(ENCLOSURES)).default([]),
-  pockets: z.enum(POCKETS).optional(),
+  specialFeatures: z.array(z.string().min(1)).default([]),
+  enclosures: z.array(z.string().min(1)).default([]),
+  pockets: z.array(z.string().min(1)).default([]),
 
   // Era & story
-  era: z.enum(ERAS).optional(),
+  era: z.array(z.string().min(1)).default([]),
   stories: z.string().optional(),
+
+  reviews: z.array(garmentReviewSchema).default([]),
 
   // Economics (manual)
   glitcoinBorrow: z.number().int().nonnegative().optional(),
   glitcoinLustLost: z.number().int().nonnegative().optional(),
-  tier: z.enum(ITEM_TIERS).optional(),
+  tier: z.array(z.string().min(1)).default([]),
 
   // Notes
   internalNotes: z.string().optional(),
@@ -104,6 +117,7 @@ export const garmentSchema = z.object({
 
 export type Garment = z.infer<typeof garmentSchema>;
 export type GarmentPhoto = z.infer<typeof garmentPhotoSchema>;
+export type GarmentReview = z.infer<typeof garmentReviewSchema>;
 
 export const garmentCreateInputSchema = garmentSchema.omit({
   id: true,
