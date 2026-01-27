@@ -5,24 +5,38 @@ import { useRouter } from "next/navigation";
 
 import {
   CARE_INSTRUCTIONS,
+  CARE_INSTRUCTION_GROUPS,
   COLORS,
+  COLOR_GROUPS,
   ENCLOSURES,
+  ENCLOSURE_GROUPS,
   ERAS,
+  ERA_GROUPS,
   FABRICS,
+  FABRIC_GROUPS,
   FITS,
+  FIT_GROUPS,
   GARMENT_TYPES,
   GARMENT_LAYERS,
   GARMENT_POSITIONS,
   INVENTORY_STATES,
   ITEM_TIERS,
   LENGTHS,
+  LENGTH_GROUPS,
   PATTERNS,
+  PATTERN_GROUPS,
   POCKETS,
+  POCKET_GROUPS,
   SILHOUETTES,
+  SILHOUETTE_GROUPS,
   SPECIAL_FEATURES,
+  SPECIAL_FEATURE_GROUPS,
   TEXTURES,
+  TEXTURE_GROUPS,
   TONES,
+  TONE_GROUPS,
   VIBES,
+  VIBE_GROUPS,
 } from "@/constants/garment";
 import { PhotoUploader } from "@/components/garments/photo-uploader";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
@@ -1010,12 +1024,15 @@ export default function NewGarmentPage() {
                     label=""
                     categoryKey="fit"
                     options={FITS}
+                    groups={FIT_GROUPS as any}
                     value={form.fit as any}
                     onChange={(next) => setField("fit", next as any)}
                   />
                 </div>
               </label>
+            </div>
 
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1 sm:col-span-2">
                 <span className="text-sm font-medium">Special fit notes</span>
                 <textarea
@@ -1053,6 +1070,7 @@ export default function NewGarmentPage() {
                         label=""
                         categoryKey="care"
                         options={CARE_INSTRUCTIONS}
+                        groups={CARE_INSTRUCTION_GROUPS as any}
                         value={form.care as any}
                         onChange={(next) => setField("care", next as any)}
                       />
@@ -1075,6 +1093,7 @@ export default function NewGarmentPage() {
                     label="Fabrics"
                     categoryKey="fabrics"
                     options={FABRICS}
+                    groups={FABRIC_GROUPS as any}
                     value={form.fabrics as any}
                     onChange={(next) => setField("fabrics", next as any)}
                   />
@@ -1086,6 +1105,7 @@ export default function NewGarmentPage() {
                   label="Confirmed colors"
                   categoryKey="colors"
                   options={COLORS}
+                  groups={COLOR_GROUPS as any}
                   value={form.colors}
                   onChange={(next) => setField("colors", next as any)}
                 />
@@ -1097,6 +1117,7 @@ export default function NewGarmentPage() {
                   label="Vibes"
                   categoryKey="vibes"
                   options={VIBES}
+                  groups={VIBE_GROUPS as any}
                   value={form.vibes as any}
                   onChange={(next) => setField("vibes", next as any)}
                 />
@@ -1108,6 +1129,7 @@ export default function NewGarmentPage() {
                   label="Tones"
                   categoryKey="tones"
                   options={TONES}
+                  groups={TONE_GROUPS as any}
                   value={form.tones as any}
                   onChange={(next) => setField("tones", next as any)}
                 />
@@ -1119,6 +1141,7 @@ export default function NewGarmentPage() {
                   label="Patterns"
                   categoryKey="pattern"
                   options={PATTERNS}
+                  groups={PATTERN_GROUPS as any}
                   value={form.pattern as any}
                   onChange={(next) => setField("pattern", next as any)}
                 />
@@ -1129,6 +1152,7 @@ export default function NewGarmentPage() {
                   label="Textures"
                   categoryKey="texture"
                   options={TEXTURES}
+                  groups={TEXTURE_GROUPS as any}
                   value={form.texture as any}
                   onChange={(next) => setField("texture", next as any)}
                 />
@@ -1139,6 +1163,7 @@ export default function NewGarmentPage() {
                   label="Silhouettes"
                   categoryKey="silhouette"
                   options={SILHOUETTES}
+                  groups={SILHOUETTE_GROUPS as any}
                   value={form.silhouette as any}
                   onChange={(next) => setField("silhouette", next as any)}
                 />
@@ -1149,6 +1174,7 @@ export default function NewGarmentPage() {
                   label="Lengths"
                   categoryKey="length"
                   options={LENGTHS}
+                  groups={LENGTH_GROUPS as any}
                   value={form.length as any}
                   onChange={(next) => setField("length", next as any)}
                 />
@@ -1159,6 +1185,7 @@ export default function NewGarmentPage() {
                   label="Pockets"
                   categoryKey="pockets"
                   options={POCKETS}
+                  groups={POCKET_GROUPS as any}
                   value={form.pockets as any}
                   onChange={(next) => setField("pockets", next as any)}
                 />
@@ -1169,6 +1196,7 @@ export default function NewGarmentPage() {
                   label="Era"
                   categoryKey="era"
                   options={ERAS}
+                  groups={ERA_GROUPS as any}
                   value={form.era as any}
                   onChange={(next) => setField("era", next as any)}
                 />
@@ -1179,6 +1207,7 @@ export default function NewGarmentPage() {
                   label="Special features"
                   categoryKey="specialFeatures"
                   options={SPECIAL_FEATURES}
+                  groups={SPECIAL_FEATURE_GROUPS as any}
                   value={form.specialFeatures as any}
                   onChange={(next) => setField("specialFeatures", next as any)}
                 />
@@ -1189,6 +1218,7 @@ export default function NewGarmentPage() {
                   label="Enclosures"
                   categoryKey="enclosures"
                   options={ENCLOSURES}
+                  groups={ENCLOSURE_GROUPS as any}
                   value={form.enclosures as any}
                   onChange={(next) => setField("enclosures", next as any)}
                 />

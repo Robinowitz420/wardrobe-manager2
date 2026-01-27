@@ -15,12 +15,14 @@ const COLOR_TO_RGB: Record<(typeof COLORS)[number], Rgb> = {
   Green: { r: 70, g: 160, b: 95 },
   Red: { r: 200, g: 60, b: 60 },
   Burgundy: { r: 120, g: 30, b: 45 },
+  Maroon: { r: 110, g: 20, b: 40 },
   Pink: { r: 230, g: 120, b: 160 },
   Purple: { r: 130, g: 90, b: 190 },
   Yellow: { r: 230, g: 205, b: 70 },
   Orange: { r: 230, g: 145, b: 60 },
   Metallic: { r: 180, g: 180, b: 190 },
   Silver: { r: 200, g: 200, b: 210 },
+  Gold: { r: 212, g: 175, b: 55 },
   Multicolor: { r: 128, g: 128, b: 128 },
 };
 

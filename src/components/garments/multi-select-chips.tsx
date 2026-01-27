@@ -2,10 +2,16 @@
 
 import * as React from "react";
 
+type OptionGroup<T extends string> = {
+  label: string;
+  options: readonly T[];
+};
+
 type Props<T extends string> = {
   label: string;
   categoryKey: string;
   options: readonly T[];
+  groups?: readonly OptionGroup<T>[];
   value: T[];
   onChange: (next: T[]) => void;
 };
@@ -14,6 +20,7 @@ export function MultiSelectChips<T extends string>({
   label,
   categoryKey,
   options,
+  groups,
   value,
   onChange,
 }: Props<T>) {
@@ -63,6 +70,30 @@ export function MultiSelectChips<T extends string>({
     }
     return out as T[];
   }, [options, customOptions]);
+
+  const groupedOptions = React.useMemo(() => {
+    if (!groups?.length) return null;
+
+    const customSet = new Set(customOptions.map((x) => x.toLowerCase()));
+
+    const groupedLower = new Set<string>();
+    const baseGroups: Array<{ label: string; options: T[] }> = groups.map((g) => {
+      const groupSet = new Set((g.options as readonly string[]).map((x) => x.toLowerCase()));
+      const list = mergedOptions.filter((opt) => groupSet.has(String(opt).toLowerCase()));
+      for (const opt of list) groupedLower.add(String(opt).toLowerCase());
+      return { label: g.label, options: list };
+    });
+
+    const remaining = mergedOptions.filter((opt) => !groupedLower.has(String(opt).toLowerCase()));
+    const remainingCustom = remaining.filter((opt) => customSet.has(String(opt).toLowerCase()));
+    const remainingUngrouped = remaining.filter((opt) => !customSet.has(String(opt).toLowerCase()));
+
+    const out: Array<{ label: string; options: T[] }> = [...baseGroups].filter((g) => g.options.length);
+    if (remainingUngrouped.length) out.push({ label: "Other", options: remainingUngrouped });
+    if (remainingCustom.length) out.push({ label: "Custom", options: remainingCustom });
+
+    return out;
+  }, [groups, mergedOptions, customOptions]);
 
   const NOT_APPLICABLE = "Not Applicable" as T;
 
@@ -132,25 +163,6 @@ export function MultiSelectChips<T extends string>({
           Not Applicable
         </button>
 
-        {mergedOptions.map((opt) => {
-          const active = value.includes(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              data-active={active ? "true" : "false"}
-              className={
-                active
-                  ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2"
-                  : "rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2"
-              }
-            >
-              {opt}
-            </button>
-          );
-        })}
-
         <button
           type="button"
           onClick={() => setAddingOther((v) => !v)}
@@ -159,6 +171,57 @@ export function MultiSelectChips<T extends string>({
           Other…
         </button>
       </div>
+
+      {groupedOptions ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {groupedOptions.map((g) => (
+            <div key={g.label} className="rounded-xl border border-border bg-background p-3">
+              <div className="text-xs font-semibold text-muted-foreground">{g.label}</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {g.options.map((opt) => {
+                  const active = value.includes(opt);
+                  return (
+                    <button
+                      key={`${g.label}_${opt}`}
+                      type="button"
+                      onClick={() => toggle(opt)}
+                      data-active={active ? "true" : "false"}
+                      className={
+                        active
+                          ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2"
+                          : "rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2"
+                      }
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {mergedOptions.map((opt) => {
+            const active = value.includes(opt);
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => toggle(opt)}
+                data-active={active ? "true" : "false"}
+                className={
+                  active
+                    ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2"
+                    : "rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2"
+                }
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {addingOther ? (
         <div className="flex flex-wrap items-center gap-2">
