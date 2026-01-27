@@ -24,6 +24,8 @@ export function MultiSelectChips<T extends string>({
   value,
   onChange,
 }: Props<T>) {
+  const safeValue = React.useMemo(() => (Array.isArray(value) ? (value as T[]) : ([] as T[])), [value]);
+
   const [customOptions, setCustomOptions] = React.useState<string[]>([]);
   const [addingOther, setAddingOther] = React.useState(false);
   const [otherText, setOtherText] = React.useState("");
@@ -99,16 +101,16 @@ export function MultiSelectChips<T extends string>({
 
   function toggle(opt: T) {
     if (opt === NOT_APPLICABLE) {
-      if (value.includes(NOT_APPLICABLE)) {
-        onChange(value.filter((v) => v !== NOT_APPLICABLE));
+      if (safeValue.includes(NOT_APPLICABLE)) {
+        onChange(safeValue.filter((v) => v !== NOT_APPLICABLE));
       } else {
         onChange([NOT_APPLICABLE]);
       }
       return;
     }
 
-    const withoutNa = value.filter((v) => v !== NOT_APPLICABLE);
-    if (value.includes(opt)) {
+    const withoutNa = safeValue.filter((v) => v !== NOT_APPLICABLE);
+    if (safeValue.includes(opt)) {
       onChange(withoutNa.filter((v) => v !== opt));
     } else {
       onChange([...withoutNa, opt]);
@@ -148,14 +150,14 @@ export function MultiSelectChips<T extends string>({
   return (
     <div className="space-y-2">
       <div className="text-base font-medium">{label}</div>
-      <div className="text-xs text-muted-foreground">{value.length ? value.join(", ") : "none"}</div>
+      <div className="text-xs text-muted-foreground">{safeValue.length ? safeValue.join(", ") : "none"}</div>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => toggle(NOT_APPLICABLE)}
-          data-active={value.includes(NOT_APPLICABLE) ? "true" : "false"}
+          data-active={safeValue.includes(NOT_APPLICABLE) ? "true" : "false"}
           className={
-            value.includes(NOT_APPLICABLE)
+            safeValue.includes(NOT_APPLICABLE)
               ? "rounded-full border border-primary bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2"
               : "rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2"
           }
@@ -179,7 +181,7 @@ export function MultiSelectChips<T extends string>({
               <div className="text-xs font-semibold text-muted-foreground">{g.label}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {g.options.map((opt) => {
-                  const active = value.includes(opt);
+                  const active = safeValue.includes(opt);
                   return (
                     <button
                       key={`${g.label}_${opt}`}
@@ -203,7 +205,7 @@ export function MultiSelectChips<T extends string>({
       ) : (
         <div className="flex flex-wrap gap-2">
           {mergedOptions.map((opt) => {
-            const active = value.includes(opt);
+            const active = safeValue.includes(opt);
             return (
               <button
                 key={opt}
