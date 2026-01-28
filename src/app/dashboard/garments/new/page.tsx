@@ -486,7 +486,7 @@ export default function NewGarmentPage() {
     if (garmentId) {
       updateGarment(garmentId, draft as any);
     } else {
-      const saved = createGarment(draft);
+      const saved = await createGarment(draft);
       garmentId = saved.id;
     }
 
@@ -516,16 +516,13 @@ export default function NewGarmentPage() {
       name: nextName,
     };
 
-    let garmentId = currentQueueItem.garmentId;
-    if (garmentId) {
-      updateGarment(garmentId, draft as any);
-    } else {
-      const saved = createGarment(draft);
-      garmentId = saved.id;
-    }
+    // beforeunload must be synchronous; we can't reliably await persistence.
+    // If no garmentId exists yet, just keep the draft in the queue and create on the next explicit save.
+    const garmentId = currentQueueItem.garmentId;
+    if (garmentId) updateGarment(garmentId, draft as any);
 
     updateIntakeQueueItem(currentQueueItem.queueItemId, {
-      garmentId,
+      garmentId: garmentId ?? undefined,
       photos: draft.photos,
       formDraft: draft,
     });
@@ -607,7 +604,7 @@ export default function NewGarmentPage() {
         return;
       }
 
-      const saved = createGarment(draft);
+      const saved = await createGarment(draft);
       router.push(`/dashboard/garments/${saved.id}`);
     } finally {
       setSaving(false);
@@ -640,8 +637,8 @@ export default function NewGarmentPage() {
           <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold">
-                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1">
+                <h2 className="text-2xl font-bold">
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
                     Vision-assisted suggestions
                   </span>
                 </h2>
@@ -846,15 +843,15 @@ export default function NewGarmentPage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-            <h2 className="text-lg font-bold">
-              <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1">
+            <h2 className="text-2xl font-bold">
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
                 Core identity
               </span>
             </h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Garment name *</span>
+                <span className="text-lg font-medium">Garment name *</span>
                 <input
                   className="h-10 rounded-xl border border-border bg-background px-3 text-base"
                   value={form.name}
@@ -864,7 +861,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Brand</span>
+                <span className="text-lg font-medium">Brand</span>
                 <input
                   className="h-10 rounded-xl border border-border bg-background px-3 text-base"
                   value={form.brand ?? ""}
@@ -874,7 +871,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">SKU</span>
+                <span className="text-lg font-medium">SKU</span>
                 <div className="flex gap-2">
                   <input
                     className="h-10 flex-1 rounded-xl border border-border bg-background px-3 text-base"
@@ -893,29 +890,18 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Layer</span>
-                <div className="mt-1 grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setField("layer", undefined as any)}
-                    className={
-                      !form.layer
-                        ? "rounded-xl border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground shadow-sm"
-                        : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
-                    }
-                  >
-                    —
-                  </button>
+                <span className="text-lg font-medium">Layer</span>
+                <div className="mt-1 grid grid-cols-2 gap-2">
                   {GARMENT_LAYERS.map((opt) => {
                     const active = form.layer === opt;
                     return (
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setField("layer", opt as any)}
+                        onClick={() => setField("layer", (active ? undefined : opt) as any)}
                         className={
                           active
-                            ? "rounded-xl border border-primary bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
+                            ? "rounded-xl border border-rose-300/50 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-900 shadow-sm"
                             : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
                         }
                       >
@@ -927,29 +913,18 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Top / Bottom</span>
-                <div className="mt-1 grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setField("position", undefined as any)}
-                    className={
-                      !form.position
-                        ? "rounded-xl border border-primary bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground shadow-sm"
-                        : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
-                    }
-                  >
-                    —
-                  </button>
+                <span className="text-lg font-medium">Top / Bottom</span>
+                <div className="mt-1 grid grid-cols-2 gap-2">
                   {GARMENT_POSITIONS.map((opt) => {
                     const active = form.position === opt;
                     return (
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setField("position", opt as any)}
+                        onClick={() => setField("position", (active ? undefined : opt) as any)}
                         className={
                           active
-                            ? "rounded-xl border border-primary bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm"
+                            ? "rounded-xl border border-rose-300/50 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-900 shadow-sm"
                             : "rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
                         }
                       >
@@ -961,7 +936,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Inventory state</span>
+                <span className="text-lg font-medium">Inventory state</span>
                 <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {INVENTORY_STATES.map((s) => {
                     const active = form.state === s;
@@ -993,7 +968,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Item tier</span>
+                <span className="text-lg font-medium">Item tier</span>
                 <div className="mt-1">
                   <MultiSelectChips
                     label=""
@@ -1008,7 +983,7 @@ export default function NewGarmentPage() {
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Size</span>
+                <span className="text-lg font-medium">Size</span>
                 <input
                   className="h-10 rounded-xl border border-border bg-background px-3 text-base"
                   value={form.size ?? ""}
@@ -1018,7 +993,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Fit</span>
+                <span className="text-lg font-medium">Fit</span>
                 <div className="mt-1">
                   <MultiSelectChips
                     label=""
@@ -1034,7 +1009,7 @@ export default function NewGarmentPage() {
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1 sm:col-span-2">
-                <span className="text-sm font-medium">Special fit notes</span>
+                <span className="text-lg font-medium">Special fit notes</span>
                 <textarea
                   className="min-h-[84px] rounded-xl border border-border bg-background px-3 py-2 text-base"
                   value={form.specialFitNotes ?? ""}
@@ -1045,8 +1020,8 @@ export default function NewGarmentPage() {
 
             <div className="mt-5 grid gap-5">
               <div className="rounded-xl border border-border bg-card p-4">
-                <div className="text-lg font-bold">
-                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1">
+                <div className="text-2xl font-bold">
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
                     Material & care
                   </span>
                 </div>
@@ -1064,7 +1039,7 @@ export default function NewGarmentPage() {
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="grid gap-1">
-                    <span className="text-sm font-medium">Care instruction</span>
+                    <span className="text-lg font-medium">Care instruction</span>
                     <div className="mt-1">
                       <MultiSelectChips
                         label=""
@@ -1078,7 +1053,7 @@ export default function NewGarmentPage() {
                   </label>
 
                   <label className="grid gap-1 sm:col-span-2">
-                    <span className="text-sm font-medium">Care notes</span>
+                    <span className="text-lg font-medium">Care notes</span>
                     <textarea
                       className="min-h-[84px] rounded-xl border border-border bg-background px-3 py-2 text-base"
                       value={form.careNotes ?? ""}
@@ -1227,8 +1202,8 @@ export default function NewGarmentPage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-            <h2 className="text-lg font-bold">
-              <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1">
+            <h2 className="text-2xl font-bold">
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
                 Economics (manual)
               </span>
             </h2>
@@ -1237,7 +1212,7 @@ export default function NewGarmentPage() {
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-sm font-medium">
+                <span className="text-lg font-medium">
                   Glitcoin to Borrow (Ġ)
                 </span>
                 <input
@@ -1254,7 +1229,7 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="text-sm font-medium">
+                <span className="text-lg font-medium">
                   Glitcoin Lust It / Lost It (Ġ)
                 </span>
                 <input
@@ -1273,28 +1248,28 @@ export default function NewGarmentPage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-            <h2 className="text-lg font-bold">
-              <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1">
+            <h2 className="text-2xl font-bold">
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
                 Story & notes
               </span>
             </h2>
             <div className="mt-4 grid grid-cols-1 gap-3">
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Stories</span>
+                <span className="text-lg font-medium">Stories</span>
                 <textarea
                   className="min-h-[120px] rounded-xl border border-border bg-background px-3 py-2 text-base"
                   value={form.stories ?? ""}
                   onChange={(e) => setField("stories", e.target.value)}
-                  placeholder="Poetic allowed."
+                  placeholder="Memories, compliments, warnings, fit notes, etc."
                 />
               </label>
               <label className="grid gap-1">
-                <span className="text-sm font-medium">Internal notes</span>
+                <span className="text-lg font-medium">Internal notes</span>
                 <textarea
                   className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-base"
                   value={form.internalNotes ?? ""}
                   onChange={(e) => setField("internalNotes", e.target.value)}
-                  placeholder="Repairs, issues, reminders."
+                  placeholder="Optional. Private metadata."
                 />
               </label>
             </div>

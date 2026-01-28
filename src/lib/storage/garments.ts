@@ -44,6 +44,11 @@ function safeLocalGet(key: string) {
   return window.localStorage.getItem(key);
 }
 
+function safeLocalSet(key: string, value: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, value);
+}
+
 function yyyymmdd(d = new Date()): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -202,7 +207,29 @@ async function fetchAllFromApi() {
       })
       .filter(Boolean);
 
-    setCache(next);
+    // Merge instead of clobbering: create can be in-flight (persistCreate is async)
+    // and an early fetch would otherwise wipe optimistic cache.
+    const byId = new Map<string, Garment>();
+    for (const g of next) byId.set(g.id, g);
+    for (const local of cache) {
+      const existing = byId.get(local.id);
+      if (!existing) {
+        byId.set(local.id, local);
+        continue;
+      }
+      const localUpdated = typeof (local as any)?.updatedAt === "string" ? (local as any).updatedAt : "";
+      const remoteUpdated = typeof (existing as any)?.updatedAt === "string" ? (existing as any).updatedAt : "";
+      if (localUpdated && remoteUpdated && localUpdated > remoteUpdated) {
+        byId.set(local.id, local);
+      }
+    }
+    const merged = Array.from(byId.values()).sort((a: any, b: any) => {
+      const au = typeof a?.updatedAt === "string" ? a.updatedAt : "";
+      const bu = typeof b?.updatedAt === "string" ? b.updatedAt : "";
+      if (au === bu) return 0;
+      return au > bu ? -1 : 1;
+    });
+    setCache(merged);
   } catch {
     // ignore
   }
@@ -280,7 +307,7 @@ async function ensureBoot() {
 async function persistCreate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
-    await fetch("/api/garments", {
+    const res = await fetch("/api/garments", {
       method: "POST",
       headers: { "content-type": "application/json" },
       keepalive: true,
@@ -295,8 +322,18 @@ async function persistCreate(garment: Garment) {
         updatedAt: garment.updatedAt,
       }),
     });
-  } catch {
-    // ignore
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as any;
+      throw new Error(typeof json?.error === "string" ? json.error : "Failed to save garment");
+    }
+  } catch (e) {
+    // Fallback: keep a local copy so a refresh doesn't lose newly created items.
+    try {
+      safeLocalSet(STORAGE_KEY, JSON.stringify([garment, ...cache]));
+    } catch {
+      // ignore
+    }
+    throw e;
   }
 }
 
@@ -343,7 +380,7 @@ export function getGarment(id: string): Garment | null {
   return found;
 }
 
-export function createGarment(input: GarmentCreateInput): Garment {
+export async function createGarment(input: GarmentCreateInput): Promise<Garment> {
   const createdAt = nowIso();
   const sku = typeof input.sku === "string" && input.sku.trim() ? input.sku.trim() : generateSku();
   const name = typeof input.name === "string" && input.name.trim() ? input.name.trim() : "Untitled garment";
@@ -358,7 +395,7 @@ export function createGarment(input: GarmentCreateInput): Garment {
   };
 
   setCache([garment, ...cache]);
-  void persistCreate(garment);
+  await persistCreate(garment);
   return garment;
 }
 
