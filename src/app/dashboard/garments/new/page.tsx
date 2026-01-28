@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { authFetch } from "@/lib/firebase/auth-fetch";
 import {
   CARE_INSTRUCTIONS,
   CARE_INSTRUCTION_GROUPS,
@@ -151,7 +152,7 @@ async function normalizeImageFile(file: File): Promise<File> {
 async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fileName: string }>> {
   const form = new FormData();
   for (const f of files) form.append("files", f);
-  const res = await fetch("/api/photos/upload", { method: "POST", body: form });
+  const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
   const json = (await res.json().catch(() => null)) as any;
   if (!res.ok || !json || !Array.isArray(json.files)) {
     throw new Error("Upload failed");
@@ -171,7 +172,7 @@ async function renameUploadedPhotos(name: string, photos: any[]): Promise<any[]>
     if (!p?.src || typeof p.src !== "string" || !p.src.startsWith("/uploads/")) continue;
 
     try {
-      const res = await fetch("/api/photos/rename", {
+      const res = await authFetch("/api/photos/rename", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ src: p.src, name: clean, index: i }),
@@ -382,7 +383,7 @@ export default function NewGarmentPage() {
 
     setVisionSuggesting(true);
     try {
-      const res = await fetch("/api/vision/analyze", {
+      const res = await authFetch("/api/vision/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
@@ -614,11 +615,20 @@ export default function NewGarmentPage() {
   return (
     <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">New Garment (Intake)</h1>
-          <p className="text-base text-muted-foreground">
-            Suggestions are optional. You control every field.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-semibold">New Garment (Intake)</h1>
+            <p className="text-base text-muted-foreground">
+              Suggestions are optional. You control every field.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/garments")}
+            className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-sm transition hover:bg-muted"
+          >
+            Back to Closet
+          </button>
         </div>
 
         {error ? (

@@ -13,6 +13,7 @@ import {
   type GarmentType,
 } from "@/constants/garment";
 import { nearestGarmentColorFromRgb } from "@/lib/vision/suggest";
+import { asAuthError, requireFirebaseUser } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 
@@ -163,6 +164,14 @@ function srcToAbsPath(src: string): string | null {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

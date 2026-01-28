@@ -1,4 +1,5 @@
 import { GARMENT_LAYERS, GARMENT_POSITIONS } from "@/constants/garment";
+import { authFetch } from "@/lib/firebase/auth-fetch";
 import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
 const STORAGE_KEY = "wardrobe_manager_garments_v1";
@@ -184,7 +185,7 @@ function setCache(next: Garment[]) {
 async function fetchAllFromApi() {
   if (typeof window === "undefined") return;
   try {
-    const res = await fetch("/api/garments", { method: "GET" });
+    const res = await authFetch("/api/garments", { method: "GET" });
     const json = (await res.json().catch(() => null)) as any;
     if (!res.ok || !json || !Array.isArray(json.garments)) return;
 
@@ -238,7 +239,7 @@ async function fetchAllFromApi() {
 async function fetchOneFromApi(id: string): Promise<Garment | null> {
   if (typeof window === "undefined") return null;
   try {
-    const res = await fetch(`/api/garments/${encodeURIComponent(id)}`, { method: "GET" });
+    const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "GET" });
     const json = (await res.json().catch(() => null)) as any;
     if (!res.ok || !json || !json.garment) return null;
     const g = normalizeLegacyGarment(json.garment);
@@ -271,7 +272,7 @@ async function migrateLegacyToSqlite() {
   for (const g of legacy) {
     const norm = normalizeLegacyGarment(g);
     try {
-      await fetch("/api/garments", {
+      await authFetch("/api/garments", {
         method: "POST",
         headers: { "content-type": "application/json" },
         keepalive: true,
@@ -307,7 +308,7 @@ async function ensureBoot() {
 async function persistCreate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
-    const res = await fetch("/api/garments", {
+    const res = await authFetch("/api/garments", {
       method: "POST",
       headers: { "content-type": "application/json" },
       keepalive: true,
@@ -340,7 +341,7 @@ async function persistCreate(garment: Garment) {
 async function persistUpdate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
-    const res = await fetch(`/api/garments/${encodeURIComponent(garment.id)}`,
+    const res = await authFetch(`/api/garments/${encodeURIComponent(garment.id)}`,
       {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -357,6 +358,15 @@ async function persistUpdate(garment: Garment) {
     }
   } catch {
     // ignore
+  }
+}
+
+async function persistDelete(id: string) {
+  if (typeof window === "undefined") return;
+  const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as any;
+    throw new Error(typeof json?.error === "string" ? json.error : "Failed to delete garment");
   }
 }
 
@@ -418,4 +428,18 @@ export function updateGarment(id: string, patch: Partial<Garment>): Garment | nu
   setCache(next);
   if (updated) void persistUpdate(updated);
   return updated;
+}
+
+export async function deleteGarment(id: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  await ensureBoot();
+
+  const prev = cache;
+  setCache(cache.filter((g) => g.id !== id));
+  try {
+    await persistDelete(id);
+  } catch (e) {
+    setCache(prev);
+    throw e;
+  }
 }

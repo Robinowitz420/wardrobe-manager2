@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { asAuthError, requireFirebaseUser } from "@/lib/firebase/admin";
+
 export const runtime = "nodejs";
 
 function newId(prefix: string) {
@@ -19,6 +21,14 @@ function extFromFileName(fileName: string): string {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let form: FormData;
   try {
     form = await request.formData();

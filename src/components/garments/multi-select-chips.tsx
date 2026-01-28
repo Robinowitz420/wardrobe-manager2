@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { authFetch } from "@/lib/firebase/auth-fetch";
+
 type OptionGroup<T extends string> = {
   label: string;
   options: readonly T[];
@@ -35,7 +37,7 @@ export function MultiSelectChips<T extends string>({
     let alive = true;
     void (async () => {
       try {
-        const res = await fetch(`/api/options?category=${encodeURIComponent(categoryKey)}`);
+        const res = await authFetch(`/api/options?category=${encodeURIComponent(categoryKey)}`);
         const json = (await res.json().catch(() => null)) as any;
         if (!alive) return;
         if (!res.ok || !json || !Array.isArray(json.options)) {
@@ -127,7 +129,7 @@ export function MultiSelectChips<T extends string>({
 
     setSavingOther(true);
     try {
-      const res = await fetch("/api/options", {
+      const res = await authFetch("/api/options", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ category: categoryKey, value: trimmed }),

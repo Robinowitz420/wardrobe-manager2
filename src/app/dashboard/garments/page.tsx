@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { listGarments } from "@/lib/storage/garments";
+import { deleteGarment, listGarments } from "@/lib/storage/garments";
 
 const CHANGE_EVENT = "wardrobe_manager_garments_changed";
 
@@ -17,6 +17,7 @@ function stateBadgeClasses(state: string) {
 
 export default function GarmentsIndexPage() {
   const [items, setItems] = React.useState(() => listGarments());
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setItems(listGarments());
@@ -30,7 +31,7 @@ export default function GarmentsIndexPage() {
     <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Garments</h1>
+          <h1 className="text-xl font-semibold">Before And Afters' Closet!</h1>
           <p className="text-sm text-muted-foreground">
             Inventory records. Clear state, manual edits, no dead pages.
           </p>
@@ -76,11 +77,36 @@ export default function GarmentsIndexPage() {
                           {g.brand ? g.brand : "No brand"}
                         </div>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${stateBadgeClasses(g.state)}`}
-                      >
-                        {g.state}
-                      </span>
+                      <div className="shrink-0">
+                        <div className="flex flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${stateBadgeClasses(g.state)}`}
+                          >
+                            {g.state}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (deletingId) return;
+                              const ok = window.confirm("Delete this garment? This cannot be undone.");
+                              if (!ok) return;
+                              setDeletingId(g.id);
+                              void deleteGarment(g.id)
+                                .catch((err) => {
+                                  const msg = err instanceof Error ? err.message : "Failed to delete garment";
+                                  window.alert(msg);
+                                })
+                                .finally(() => setDeletingId(null));
+                            }}
+                            disabled={deletingId === g.id}
+                            className="rounded-xl bg-destructive px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm transition hover:opacity-90 disabled:opacity-60"
+                          >
+                            {deletingId === g.id ? "Deleting…" : "Delete"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>{completion}</span>

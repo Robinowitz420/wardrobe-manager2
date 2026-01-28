@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/db";
+import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 
@@ -23,31 +23,35 @@ function normalizePhotos(raw: unknown): unknown[] {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await ctx.params;
-  const db = getDb();
 
-  const row = db
-    .prepare(
-      "SELECT id, name, completionStatus, photos, attributes, intakeSessionId, intakeOrder, createdAt, updatedAt FROM garments WHERE id = ?",
-    )
-    .get(id) as any;
-
-  if (!row) {
+  const db = getAdminFirestore();
+  const snap = await db.collection("garments").doc(id).get();
+  if (!snap.exists) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const photos = JSON.parse(row.photos);
-  const attributes = JSON.parse(row.attributes);
+  const row = snap.data() as any;
+  const photos = Array.isArray(row?.photos) ? row.photos : [];
+  const attributes = row?.attributes ?? {};
 
   return NextResponse.json({
     garment: {
       ...attributes,
-      id: row.id,
+      id: row.id ?? id,
       name: row.name ?? "Untitled garment",
-      completionStatus: row.completionStatus,
+      completionStatus: row.completionStatus ?? "DRAFT",
       photos,
       intakeSessionId: row.intakeSessionId ?? undefined,
       intakeOrder: typeof row.intakeOrder === "number" ? row.intakeOrder : undefined,
@@ -61,6 +65,14 @@ export async function PATCH(
   request: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await ctx.params;
 
   let payload: unknown;
@@ -70,19 +82,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare(
-      "SELECT id, name, completionStatus, photos, attributes, intakeSessionId, intakeOrder, createdAt, updatedAt FROM garments WHERE id = ?",
-    )
-    .get(id) as any;
-
-  if (!existing) {
+  const db = getAdminFirestore();
+  const ref = db.collection("garments").doc(id);
+  const existingSnap = await ref.get();
+  if (!existingSnap.exists) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const existingPhotos = JSON.parse(existing.photos);
-  const existingAttributes = JSON.parse(existing.attributes);
+  const existing = existingSnap.data() as any;
+  const existingPhotos = Array.isArray(existing?.photos) ? existing.photos : [];
+  const existingAttributes = existing?.attributes ?? {};
 
   const nextAttributes = { ...existingAttributes, ...(payload as any), id };
   const nextPhotos =
@@ -97,28 +106,31 @@ export async function PATCH(
 
   const updatedAt = nowIso();
 
-  db.prepare(
-    "UPDATE garments SET name = @name, completionStatus = @completionStatus, photos = @photos, attributes = @attributes, intakeSessionId = @intakeSessionId, intakeOrder = @intakeOrder, updatedAt = @updatedAt WHERE id = @id",
-  ).run({
-    id,
-    name:
-      typeof nextName === "string" && nextName.trim() && nextName.trim() !== "Untitled garment"
-        ? nextName.trim()
-        : null,
-    completionStatus,
-    photos: JSON.stringify(nextPhotos),
-    attributes: JSON.stringify(nextAttributes),
-    intakeSessionId: (payload as any)?.intakeSessionId ?? existing.intakeSessionId ?? null,
-    intakeOrder: (payload as any)?.intakeOrder ?? existing.intakeOrder ?? null,
-    updatedAt,
-  });
+  const trimmedName =
+    typeof nextName === "string" && nextName.trim() && nextName.trim() !== "Untitled garment"
+      ? nextName.trim()
+      : null;
+
+  await ref.set(
+    {
+      id,
+      name: trimmedName,
+      completionStatus,
+      photos: nextPhotos,
+      attributes: nextAttributes,
+      intakeSessionId: (payload as any)?.intakeSessionId ?? existing.intakeSessionId ?? null,
+      intakeOrder: (payload as any)?.intakeOrder ?? existing.intakeOrder ?? null,
+      createdAt: existing.createdAt,
+      updatedAt,
+    },
+    { merge: true },
+  );
 
   return NextResponse.json({
     garment: {
       ...nextAttributes,
       id,
-      name:
-        typeof nextName === "string" && nextName.trim() ? nextName.trim() : "Untitled garment",
+      name: typeof nextName === "string" && nextName.trim() ? nextName.trim() : "Untitled garment",
       completionStatus,
       photos: nextPhotos,
       intakeSessionId: (payload as any)?.intakeSessionId ?? existing.intakeSessionId ?? undefined,
@@ -127,4 +139,29 @@ export async function PATCH(
       updatedAt,
     },
   });
+}
+
+export async function DELETE(
+  request: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+
+  const db = getAdminFirestore();
+  const ref = db.collection("garments").doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  await ref.delete();
+  return NextResponse.json({ ok: true });
 }

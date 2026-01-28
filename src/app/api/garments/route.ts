@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/db";
+import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 
@@ -29,30 +29,45 @@ function maybeIso(value: unknown): string | null {
   return s;
 }
 
-export async function GET() {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      "SELECT id, name, completionStatus, photos, attributes, intakeSessionId, intakeOrder, createdAt, updatedAt FROM garments ORDER BY updatedAt DESC",
-    )
-    .all() as Array<any>;
+export async function GET(request: Request) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  const garments = rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    completionStatus: r.completionStatus,
-    photos: JSON.parse(r.photos),
-    attributes: JSON.parse(r.attributes),
-    intakeSessionId: r.intakeSessionId ?? undefined,
-    intakeOrder: typeof r.intakeOrder === "number" ? r.intakeOrder : undefined,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-  }));
+  const db = getAdminFirestore();
+  const snap = await db.collection("garments").orderBy("updatedAt", "desc").get();
+
+  const garments = snap.docs.map((d) => {
+    const r = d.data() as any;
+    return {
+      id: r.id ?? d.id,
+      name: r.name ?? null,
+      completionStatus: r.completionStatus,
+      photos: Array.isArray(r.photos) ? r.photos : [],
+      attributes: r.attributes ?? {},
+      intakeSessionId: r.intakeSessionId ?? undefined,
+      intakeOrder: typeof r.intakeOrder === "number" ? r.intakeOrder : undefined,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    };
+  });
 
   return NextResponse.json({ garments });
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();
@@ -71,36 +86,38 @@ export async function POST(request: Request) {
 
   const completionStatus = computeCompletionStatus(name, photos);
 
-  const db = getDb();
-
-  const existing = db
-    .prepare("SELECT createdAt FROM garments WHERE id = ?")
-    .get(id) as any;
+  const db = getAdminFirestore();
+  const ref = db.collection("garments").doc(id);
+  const existing = await ref.get();
+  const existingCreatedAt = existing.exists ? (existing.data() as any)?.createdAt : null;
 
   const createdAt =
-    typeof existing?.createdAt === "string"
-      ? existing.createdAt
+    typeof existingCreatedAt === "string"
+      ? existingCreatedAt
       : maybeIso((payload as any)?.createdAt) ?? nowIso();
   const updatedAt = maybeIso((payload as any)?.updatedAt) ?? nowIso();
 
-  db.prepare(
-    "INSERT OR REPLACE INTO garments (id, name, completionStatus, photos, attributes, intakeSessionId, intakeOrder, createdAt, updatedAt) VALUES (@id, @name, @completionStatus, @photos, @attributes, @intakeSessionId, @intakeOrder, @createdAt, @updatedAt)",
-  ).run({
-    id,
-    name: typeof name === "string" && name.trim() ? name.trim() : null,
-    completionStatus,
-    photos: JSON.stringify(photos),
-    attributes: JSON.stringify(attributes),
-    intakeSessionId: (payload as any)?.intakeSessionId ?? null,
-    intakeOrder: (payload as any)?.intakeOrder ?? null,
-    createdAt,
-    updatedAt,
-  });
+  const trimmedName = typeof name === "string" && name.trim() ? name.trim() : null;
+
+  await ref.set(
+    {
+      id,
+      name: trimmedName,
+      completionStatus,
+      photos,
+      attributes,
+      intakeSessionId: (payload as any)?.intakeSessionId ?? null,
+      intakeOrder: (payload as any)?.intakeOrder ?? null,
+      createdAt,
+      updatedAt,
+    },
+    { merge: true },
+  );
 
   return NextResponse.json({
     garment: {
       id,
-      name: typeof name === "string" && name.trim() ? name.trim() : null,
+      name: trimmedName,
       completionStatus,
       photos,
       attributes,

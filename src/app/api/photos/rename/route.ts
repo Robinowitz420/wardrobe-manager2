@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { access, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 
+import { asAuthError, requireFirebaseUser } from "@/lib/firebase/admin";
+
 export const runtime = "nodejs";
 
 function safeSlug(input: string): string {
@@ -31,6 +33,14 @@ async function exists(p: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireFirebaseUser(request);
+  } catch (e) {
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();

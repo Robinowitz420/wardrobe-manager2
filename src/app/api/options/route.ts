@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/db";
+import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 
@@ -16,34 +16,48 @@ function serverError(message: string) {
   return NextResponse.json({ error: message }, { status: 500 });
 }
 
+function safeDocId(input: string) {
+  return input.replace(/\//g, "_").slice(0, 500);
+}
+
 export async function GET(request: Request) {
   try {
+    await requireFirebaseUser(request);
+
     const url = new URL(request.url);
     const category = url.searchParams.get("category");
 
-    const db = getDb();
+    const db = getAdminFirestore();
+    const col = db.collection("custom_options");
 
     if (category && category.trim()) {
-      const rows = db
-        .prepare(
-          "SELECT category, value, createdAt FROM custom_options WHERE category = ? ORDER BY value COLLATE NOCASE ASC",
-        )
-        .all(category.trim()) as Array<any>;
+      const cat = category.trim();
+      const catLower = cat.toLowerCase();
 
-      return NextResponse.json({ category: category.trim(), options: rows.map((r) => r.value) });
+      const snap = await col.where("categoryLower", "==", catLower).get();
+      const options = snap.docs
+        .map((d) => (d.data() as any)?.value)
+        .filter((v) => typeof v === "string")
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+      return NextResponse.json({ category: cat, options });
     }
 
-    const rows = db
-      .prepare(
-        "SELECT category, value, createdAt FROM custom_options ORDER BY category COLLATE NOCASE ASC, value COLLATE NOCASE ASC",
-      )
-      .all() as Array<any>;
+    const snap = await col.get();
+    const rows = snap.docs
+      .map((d) => d.data() as any)
+      .filter((r) => typeof r?.category === "string" && typeof r?.value === "string");
+
+    rows.sort((a, b) => {
+      const ac = String(a.category).localeCompare(String(b.category), undefined, { sensitivity: "base" });
+      if (ac !== 0) return ac;
+      return String(a.value).localeCompare(String(b.value), undefined, { sensitivity: "base" });
+    });
 
     const byCategory: Record<string, string[]> = {};
     for (const r of rows) {
-      const cat = typeof r?.category === "string" ? r.category : "";
-      const val = typeof r?.value === "string" ? r.value : "";
-      if (!cat || !val) continue;
+      const cat = r.category as string;
+      const val = r.value as string;
       if (!byCategory[cat]) byCategory[cat] = [];
       byCategory[cat].push(val);
     }
@@ -51,12 +65,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ options: byCategory });
   } catch (e) {
     console.error("/api/options GET failed", e);
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
     return serverError(e instanceof Error ? e.message : "Failed to read options");
   }
 }
 
 export async function POST(request: Request) {
   try {
+    await requireFirebaseUser(request);
+
     let payload: unknown;
     try {
       payload = await request.json();
@@ -70,25 +88,23 @@ export async function POST(request: Request) {
     if (!category) return badRequest("Missing category");
     if (!valueRaw) return badRequest("Missing value");
 
-    const db = getDb();
+    const db = getAdminFirestore();
+    const createdAt = nowIso();
 
-    db.prepare(
-      "INSERT OR IGNORE INTO custom_options (category, value, createdAt) VALUES (?, ?, ?)",
-    ).run(category, valueRaw, nowIso());
+    const id = safeDocId(`${category}__${valueRaw.toLowerCase()}`);
+    await db.collection("custom_options").doc(id).set({
+      category,
+      categoryLower: category.toLowerCase(),
+      value: valueRaw,
+      valueLower: valueRaw.toLowerCase(),
+      createdAt,
+    });
 
-    const found = db
-      .prepare(
-        "SELECT category, value, createdAt FROM custom_options WHERE category = ? AND value = ? COLLATE NOCASE LIMIT 1",
-      )
-      .get(category, valueRaw) as any;
-
-    if (!found) {
-      return serverError("Failed to save option");
-    }
-
-    return NextResponse.json({ option: { category: found.category, value: found.value, createdAt: found.createdAt } });
+    return NextResponse.json({ option: { category, value: valueRaw, createdAt } });
   } catch (e) {
     console.error("/api/options POST failed", e);
+    const ae = asAuthError(e);
+    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
     return serverError(e instanceof Error ? e.message : "Failed to save option");
   }
 }
