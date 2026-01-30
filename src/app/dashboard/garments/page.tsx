@@ -28,7 +28,7 @@ export default function GarmentsIndexPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Before And Afters' Closet!</h1>

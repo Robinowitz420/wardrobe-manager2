@@ -4,6 +4,7 @@ import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
 const STORAGE_KEY = "wardrobe_manager_garments_v1";
 const CHANGE_EVENT = "wardrobe_manager_garments_changed";
+export const SAVE_ERROR_EVENT = "wardrobe_manager_save_error";
 
 let cache: Garment[] = [];
 let bootPromise: Promise<void> | null = null;
@@ -355,9 +356,22 @@ async function persistUpdate(garment: Garment) {
     );
     if (res.status === 404) {
       await persistCreate(garment);
+      return;
     }
-  } catch {
-    // ignore
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      const message = typeof json?.error === "string" ? json.error : `Save failed (${res.status})`;
+      const err = new Error(message);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: err }));
+      }
+      throw err;
+    }
+  } catch (e) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(String(e)) }));
+    }
+    throw e;
   }
 }
 

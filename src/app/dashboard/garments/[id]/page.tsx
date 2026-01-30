@@ -79,7 +79,7 @@ export default function GarmentDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="text-sm text-muted-foreground">Loading…</div>
         </div>
@@ -89,11 +89,11 @@ export default function GarmentDetailPage() {
 
   if (error || !garment) {
     return (
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <h1 className="text-xl font-semibold">Garment not found</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {error ? error : "This record may have been deleted."}
+            {error ? error : "No garment found."}
           </p>
           <div className="mt-6 flex gap-3">
             <button
@@ -125,7 +125,7 @@ export default function GarmentDetailPage() {
   const reviews = Array.isArray((garment as any).reviews) ? ((garment as any).reviews as any[]) : [];
 
   return (
-    <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{garment.name}</h1>

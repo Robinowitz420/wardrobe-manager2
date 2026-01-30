@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-col gap-2">
           <h1 className="text-xl font-semibold">Dashboard</h1>

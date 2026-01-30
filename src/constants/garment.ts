@@ -401,7 +401,7 @@ export const ENCLOSURE_GROUPS = [
     options: ["None"],
   },
   {
-    label: "Unknown",
+    label: "Issues",
     options: ["Something is Missing"],
   },
 ] as const;
@@ -436,7 +436,6 @@ export const ERAS = [
   "2010s",
   "NOW",
   "Contemporary",
-  "Unknown",
 ] as const;
 
 export const ERA_GROUPS = [
@@ -447,10 +446,6 @@ export const ERA_GROUPS = [
   {
     label: "Modern",
     options: ["Y2K", "2010s", "NOW", "Contemporary"],
-  },
-  {
-    label: "Unknown",
-    options: ["Unknown"],
   },
 ] as const;
 

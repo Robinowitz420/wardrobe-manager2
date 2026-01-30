@@ -98,7 +98,7 @@ export default function GarmentEditPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="text-sm text-muted-foreground">Loading…</div>
         </div>
@@ -108,7 +108,7 @@ export default function GarmentEditPage() {
 
   if (!garment) {
     return (
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <h1 className="text-xl font-semibold">Garment not found</h1>
           <div className="mt-6">
@@ -125,7 +125,7 @@ export default function GarmentEditPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex items-end justify-between gap-4">
           <div>
