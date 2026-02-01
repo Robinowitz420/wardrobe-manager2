@@ -51,6 +51,49 @@ function safeLocalSet(key: string, value: string) {
   window.localStorage.setItem(key, value);
 }
 
+function safeLocalRemove(key: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(key);
+}
+
+function readFallbackGarments(): Garment[] {
+  const raw = safeLocalGet(STORAGE_KEY);
+  const parsed = safeJsonParse<Garment[]>(raw) ?? [];
+  return Array.isArray(parsed) ? parsed.map((g) => normalizeLegacyGarment(g as any)) : [];
+}
+
+function writeFallbackGarments(next: Garment[]) {
+  try {
+    safeLocalSet(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
+function upsertFallbackGarment(garment: Garment) {
+  const existing = readFallbackGarments();
+  const byId = new Map<string, Garment>();
+  for (const g of existing) byId.set(g.id, g);
+  byId.set(garment.id, garment);
+  const merged = Array.from(byId.values()).sort((a: any, b: any) => {
+    const au = typeof a?.updatedAt === "string" ? a.updatedAt : "";
+    const bu = typeof b?.updatedAt === "string" ? b.updatedAt : "";
+    if (au === bu) return 0;
+    return au > bu ? -1 : 1;
+  });
+  writeFallbackGarments(merged);
+}
+
+function removeFallbackGarment(id: string) {
+  const existing = readFallbackGarments();
+  const next = existing.filter((g) => g.id !== id);
+  if (next.length === 0) {
+    safeLocalRemove(STORAGE_KEY);
+  } else {
+    writeFallbackGarments(next);
+  }
+}
+
 function yyyymmdd(d = new Date()): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -183,12 +226,12 @@ function setCache(next: Garment[]) {
   emitChanged();
 }
 
-async function fetchAllFromApi() {
-  if (typeof window === "undefined") return;
+async function fetchAllFromApi(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
   try {
     const res = await authFetch("/api/garments", { method: "GET" });
     const json = (await res.json().catch(() => null)) as any;
-    if (!res.ok || !json || !Array.isArray(json.garments)) return;
+    if (!res.ok || !json || !Array.isArray(json.garments)) return false;
 
     const next: Garment[] = json.garments
       .map((r: any) => {
@@ -232,8 +275,9 @@ async function fetchAllFromApi() {
       return au > bu ? -1 : 1;
     });
     setCache(merged);
+    return true;
   } catch {
-    // ignore
+    return false;
   }
 }
 
@@ -300,8 +344,27 @@ async function ensureBoot() {
   if (typeof window === "undefined") return;
   if (bootPromise) return bootPromise;
   bootPromise = (async () => {
+    // If the API layer is misconfigured/unavailable, we still want refresh persistence.
+    // Load any local fallback copy first so the UI isn't empty.
+    try {
+      const local = readFallbackGarments();
+      if (local.length > 0) setCache(local);
+    } catch {
+      // ignore
+    }
     await migrateLegacyToSqlite();
-    await fetchAllFromApi();
+    const ok = await fetchAllFromApi();
+
+    // If API fetch failed, keep whatever we have (possibly from local fallback).
+    // But if cache is empty, try loading local again as a last resort.
+    if (!ok && cache.length === 0) {
+      try {
+        const local = readFallbackGarments();
+        if (local.length > 0) setCache(local);
+      } catch {
+        // ignore
+      }
+    }
   })();
   return bootPromise;
 }
@@ -330,11 +393,7 @@ async function persistCreate(garment: Garment) {
     }
   } catch (e) {
     // Fallback: keep a local copy so a refresh doesn't lose newly created items.
-    try {
-      safeLocalSet(STORAGE_KEY, JSON.stringify([garment, ...cache]));
-    } catch {
-      // ignore
-    }
+    upsertFallbackGarment(garment);
     throw e;
   }
 }
@@ -368,6 +427,12 @@ async function persistUpdate(garment: Garment) {
       throw err;
     }
   } catch (e) {
+    // Fallback: ensure updates persist across refresh if the API is failing.
+    try {
+      upsertFallbackGarment(garment);
+    } catch {
+      // ignore
+    }
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(String(e)) }));
     }
@@ -377,10 +442,20 @@ async function persistUpdate(garment: Garment) {
 
 async function persistDelete(id: string) {
   if (typeof window === "undefined") return;
-  const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
-  if (!res.ok) {
-    const json = (await res.json().catch(() => null)) as any;
-    throw new Error(typeof json?.error === "string" ? json.error : "Failed to delete garment");
+  try {
+    const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as any;
+      throw new Error(typeof json?.error === "string" ? json.error : "Failed to delete garment");
+    }
+  } catch (e) {
+    // Fallback: reflect deletes in local persistence too.
+    try {
+      removeFallbackGarment(id);
+    } catch {
+      // ignore
+    }
+    throw e;
   }
 }
 
