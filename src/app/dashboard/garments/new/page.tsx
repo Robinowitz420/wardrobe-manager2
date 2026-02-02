@@ -43,7 +43,7 @@ import { PhotoUploader } from "@/components/garments/photo-uploader";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
 import type { GarmentCreateInput } from "@/lib/validations/garment";
 import { garmentCreateInputSchema } from "@/lib/validations/garment";
-import { createGarment, fetchGarmentById, generateSku, updateGarment } from "@/lib/storage/garments";
+import { SAVE_ERROR_EVENT, createGarment, fetchGarmentById, generateSku, updateGarment } from "@/lib/storage/garments";
 import type { IntakeQueueState } from "@/lib/storage/intake-queue";
 import {
   clearIntakeQueue,
@@ -155,7 +155,13 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
   const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
   const json = (await res.json().catch(() => null)) as any;
   if (!res.ok || !json || !Array.isArray(json.files)) {
-    throw new Error("Upload failed");
+    const base =
+      typeof json?.error === "string" ? json.error : `Upload failed (${res.status || "unknown"})`;
+    const extraParts: string[] = [];
+    if (typeof json?.code === "string" && json.code.trim()) extraParts.push(`code: ${json.code.trim()}`);
+    if (typeof json?.bucket === "string" && json.bucket.trim()) extraParts.push(`bucket: ${json.bucket.trim()}`);
+    const extra = extraParts.length > 0 ? ` (${extraParts.join(", ")})` : "";
+    throw new Error(`${base}${extra}`);
   }
   return json.files
     .map((x: any) => ({ src: x?.src, fileName: x?.fileName }))
@@ -282,29 +288,37 @@ export default function NewGarmentPage() {
 
     const normalizedFiles = await Promise.all(files.map((f) => normalizeImageFile(f)));
 
-    let uploaded: Array<{ src: string; fileName: string }> = [];
     try {
-      uploaded = await uploadFilesToDisk(normalizedFiles);
-    } catch {
-      uploaded = [];
-    }
+      const uploaded = await uploadFilesToDisk(normalizedFiles);
 
-    for (let i = 0; i < normalizedFiles.length; i++) {
-      const f = normalizedFiles[i];
-      const disk = uploaded[i];
-      const photo = disk?.src
-        ? { id: newId("p"), src: disk.src, isPrimary: true, fileName: disk.fileName }
-        : { id: newId("p"), dataUrl: await fileToDataUrl(f), isPrimary: true, fileName: f.name };
-      items.push({
-        photos: [photo],
-        formDraft: {
-          ...form,
-          photos: [photo] as any,
-          suggested: {},
-          completionStatus: "DRAFT",
-          name: "Untitled garment",
-        },
-      });
+      if (uploaded.length !== normalizedFiles.length) {
+        throw new Error("Upload failed");
+      }
+
+      for (let i = 0; i < normalizedFiles.length; i++) {
+        const disk = uploaded[i];
+        if (!disk?.src) {
+          throw new Error("Upload failed");
+        }
+        const photo = { id: newId("p"), src: disk.src, isPrimary: true, fileName: disk.fileName };
+        items.push({
+          photos: [photo],
+          formDraft: {
+            ...form,
+            photos: [photo] as any,
+            suggested: {},
+            completionStatus: "DRAFT",
+            name: "Untitled garment",
+          },
+        });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      setError(msg);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(msg) }));
+      }
+      return;
     }
 
     const started = startIntakeQueue(items);

@@ -15,6 +15,18 @@ class AuthError extends Error {
   }
 }
 
+function normalizeBucketName(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  // Reject obvious URL-like values.
+  if (s.includes("://")) return null;
+  if (s.includes("/")) return null;
+  // Bucket names typically look like "<project>.appspot.com" or
+  // "<project>.firebasestorage.app".
+  return s;
+}
+
 function initAdmin() {
   if (getApps().length > 0) return;
 
@@ -33,11 +45,11 @@ function initAdmin() {
   initializeApp({
     credential: cert(svc),
     storageBucket:
-      typeof process.env.FIREBASE_STORAGE_BUCKET === "string" && process.env.FIREBASE_STORAGE_BUCKET.trim()
-        ? process.env.FIREBASE_STORAGE_BUCKET.trim()
-        : typeof svc?.project_id === "string" && svc.project_id.trim()
-          ? `${svc.project_id.trim()}.appspot.com`
-          : undefined,
+      normalizeBucketName(process.env.FIREBASE_STORAGE_BUCKET) ??
+      normalizeBucketName(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) ??
+      (typeof svc?.project_id === "string" && svc.project_id.trim()
+        ? `${svc.project_id.trim()}.appspot.com`
+        : undefined),
   });
 }
 

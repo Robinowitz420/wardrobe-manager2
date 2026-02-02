@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { authFetch } from "@/lib/firebase/auth-fetch";
+import { SAVE_ERROR_EVENT } from "@/lib/storage/garments";
 import type { GarmentPhoto } from "@/lib/validations/garment";
 
 type Props = {
@@ -58,7 +59,13 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
   const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
   const json = (await res.json().catch(() => null)) as any;
   if (!res.ok || !json || !Array.isArray(json.files)) {
-    throw new Error("Upload failed");
+    const base =
+      typeof json?.error === "string" ? json.error : `Upload failed (${res.status || "unknown"})`;
+    const extraParts: string[] = [];
+    if (typeof json?.code === "string" && json.code.trim()) extraParts.push(`code: ${json.code.trim()}`);
+    if (typeof json?.bucket === "string" && json.bucket.trim()) extraParts.push(`bucket: ${json.bucket.trim()}`);
+    const extra = extraParts.length > 0 ? ` (${extraParts.join(", ")})` : "";
+    throw new Error(`${base}${extra}`);
   }
 
   return json.files
@@ -68,6 +75,12 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
 
 export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  function emitUploadError(err: unknown) {
+    if (typeof window === "undefined") return;
+    const e = err instanceof Error ? err : new Error(typeof err === "string" ? err : "Upload failed");
+    window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e }));
+  }
 
   async function onPickFiles(files: FileList | null) {
     if (!files) return;
@@ -93,9 +106,10 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
       } else {
         throw new Error("Upload failed");
       }
-    } catch {
-      const dataUrl = await fileToDataUrl(normalized);
-      next = [{ id: newId(), dataUrl, isPrimary: true, fileName: normalized.name }];
+    } catch (e) {
+      emitUploadError(e);
+      if (inputRef.current) inputRef.current.value = "";
+      return;
     }
 
     onChange(next);
