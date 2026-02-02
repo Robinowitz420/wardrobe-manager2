@@ -2,21 +2,11 @@ import { GARMENT_LAYERS, GARMENT_POSITIONS } from "@/constants/garment";
 import { authFetch } from "@/lib/firebase/auth-fetch";
 import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
-const STORAGE_KEY = "wardrobe_manager_garments_v1";
 const CHANGE_EVENT = "wardrobe_manager_garments_changed";
 export const SAVE_ERROR_EVENT = "wardrobe_manager_save_error";
 
 let cache: Garment[] = [];
 let bootPromise: Promise<void> | null = null;
-
-function safeJsonParse<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
 
 function nowIso() {
   return new Date().toISOString();
@@ -39,59 +29,6 @@ function computeCompletionStatus(name: string, photos: Garment["photos"]) {
 function emitChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CHANGE_EVENT));
-}
-
-function safeLocalGet(key: string) {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(key);
-}
-
-function safeLocalSet(key: string, value: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, value);
-}
-
-function safeLocalRemove(key: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(key);
-}
-
-function readFallbackGarments(): Garment[] {
-  const raw = safeLocalGet(STORAGE_KEY);
-  const parsed = safeJsonParse<Garment[]>(raw) ?? [];
-  return Array.isArray(parsed) ? parsed.map((g) => normalizeLegacyGarment(g as any)) : [];
-}
-
-function writeFallbackGarments(next: Garment[]) {
-  try {
-    safeLocalSet(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // ignore
-  }
-}
-
-function upsertFallbackGarment(garment: Garment) {
-  const existing = readFallbackGarments();
-  const byId = new Map<string, Garment>();
-  for (const g of existing) byId.set(g.id, g);
-  byId.set(garment.id, garment);
-  const merged = Array.from(byId.values()).sort((a: any, b: any) => {
-    const au = typeof a?.updatedAt === "string" ? a.updatedAt : "";
-    const bu = typeof b?.updatedAt === "string" ? b.updatedAt : "";
-    if (au === bu) return 0;
-    return au > bu ? -1 : 1;
-  });
-  writeFallbackGarments(merged);
-}
-
-function removeFallbackGarment(id: string) {
-  const existing = readFallbackGarments();
-  const next = existing.filter((g) => g.id !== id);
-  if (next.length === 0) {
-    safeLocalRemove(STORAGE_KEY);
-  } else {
-    writeFallbackGarments(next);
-  }
 }
 
 function yyyymmdd(d = new Date()): string {
@@ -252,29 +189,7 @@ async function fetchAllFromApi(): Promise<boolean> {
       })
       .filter(Boolean);
 
-    // Merge instead of clobbering: create can be in-flight (persistCreate is async)
-    // and an early fetch would otherwise wipe optimistic cache.
-    const byId = new Map<string, Garment>();
-    for (const g of next) byId.set(g.id, g);
-    for (const local of cache) {
-      const existing = byId.get(local.id);
-      if (!existing) {
-        byId.set(local.id, local);
-        continue;
-      }
-      const localUpdated = typeof (local as any)?.updatedAt === "string" ? (local as any).updatedAt : "";
-      const remoteUpdated = typeof (existing as any)?.updatedAt === "string" ? (existing as any).updatedAt : "";
-      if (localUpdated && remoteUpdated && localUpdated > remoteUpdated) {
-        byId.set(local.id, local);
-      }
-    }
-    const merged = Array.from(byId.values()).sort((a: any, b: any) => {
-      const au = typeof a?.updatedAt === "string" ? a.updatedAt : "";
-      const bu = typeof b?.updatedAt === "string" ? b.updatedAt : "";
-      if (au === bu) return 0;
-      return au > bu ? -1 : 1;
-    });
-    setCache(merged);
+    setCache(next);
     return true;
   } catch {
     return false;
@@ -304,67 +219,11 @@ async function fetchOneFromApi(id: string): Promise<Garment | null> {
   }
 }
 
-async function migrateLegacyToSqlite() {
-  if (typeof window === "undefined") return;
-
-  const legacyRaw = safeLocalGet(STORAGE_KEY);
-  const legacy = safeJsonParse<Garment[]>(legacyRaw) ?? [];
-  if (legacy.length === 0) {
-    if (legacyRaw) window.localStorage.removeItem(STORAGE_KEY);
-    return;
-  }
-
-  for (const g of legacy) {
-    const norm = normalizeLegacyGarment(g);
-    try {
-      await authFetch("/api/garments", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        keepalive: true,
-        body: JSON.stringify({
-          id: norm.id,
-          name: norm.name,
-          photos: norm.photos,
-          attributes: norm,
-          intakeSessionId: norm.intakeSessionId,
-          intakeOrder: norm.intakeOrder,
-          createdAt: norm.createdAt,
-          updatedAt: norm.updatedAt,
-        }),
-      });
-    } catch {
-      return;
-    }
-  }
-
-  window.localStorage.removeItem(STORAGE_KEY);
-}
-
 async function ensureBoot() {
   if (typeof window === "undefined") return;
   if (bootPromise) return bootPromise;
   bootPromise = (async () => {
-    // If the API layer is misconfigured/unavailable, we still want refresh persistence.
-    // Load any local fallback copy first so the UI isn't empty.
-    try {
-      const local = readFallbackGarments();
-      if (local.length > 0) setCache(local);
-    } catch {
-      // ignore
-    }
-    await migrateLegacyToSqlite();
-    const ok = await fetchAllFromApi();
-
-    // If API fetch failed, keep whatever we have (possibly from local fallback).
-    // But if cache is empty, try loading local again as a last resort.
-    if (!ok && cache.length === 0) {
-      try {
-        const local = readFallbackGarments();
-        if (local.length > 0) setCache(local);
-      } catch {
-        // ignore
-      }
-    }
+    await fetchAllFromApi();
   })();
   return bootPromise;
 }
@@ -401,8 +260,6 @@ async function persistCreate(garment: Garment) {
       throw new Error(typeof json?.error === "string" ? json.error : "Failed to save garment");
     }
   } catch (e) {
-    // Fallback: keep a local copy so a refresh doesn't lose newly created items.
-    upsertFallbackGarment(garment);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(String(e)) }));
     }
@@ -448,15 +305,11 @@ async function persistUpdate(garment: Garment) {
       throw err;
     }
   } catch (e) {
-    // Fallback: ensure updates persist across refresh if the API is failing.
-    try {
-      upsertFallbackGarment(garment);
-    } catch {
-      // ignore
-    }
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(String(e)) }));
     }
+    // Best-effort resync so the UI doesn't get stuck showing unsaved edits.
+    void fetchOneFromApi(garment.id);
     throw e;
   }
 }
@@ -466,12 +319,7 @@ async function persistDelete(id: string) {
   try {
     const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
     if (res.status === 404) {
-      // Idempotent delete: item may exist only in local fallback (or already deleted on the server).
-      try {
-        removeFallbackGarment(id);
-      } catch {
-        // ignore
-      }
+      // Idempotent delete: already deleted on the server.
       return;
     }
     if (!res.ok) {
@@ -479,12 +327,6 @@ async function persistDelete(id: string) {
       throw new Error(typeof json?.error === "string" ? json.error : "Failed to delete garment");
     }
   } catch (e) {
-    // Fallback: reflect deletes in local persistence too.
-    try {
-      removeFallbackGarment(id);
-    } catch {
-      // ignore
-    }
     throw e;
   }
 }
@@ -510,6 +352,7 @@ export function getGarment(id: string): Garment | null {
 }
 
 export async function createGarment(input: GarmentCreateInput): Promise<Garment> {
+  await ensureBoot();
   const createdAt = nowIso();
   const sku = typeof input.sku === "string" && input.sku.trim() ? input.sku.trim() : generateSku();
   const name = typeof input.name === "string" && input.name.trim() ? input.name.trim() : "Untitled garment";
@@ -523,8 +366,14 @@ export async function createGarment(input: GarmentCreateInput): Promise<Garment>
     updatedAt: createdAt,
   };
 
+  const prev = cache;
   setCache([garment, ...cache]);
-  await persistCreate(garment);
+  try {
+    await persistCreate(garment);
+  } catch (e) {
+    setCache(prev);
+    throw e;
+  }
   return garment;
 }
 
