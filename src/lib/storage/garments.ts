@@ -394,6 +394,9 @@ async function persistCreate(garment: Garment) {
   } catch (e) {
     // Fallback: keep a local copy so a refresh doesn't lose newly created items.
     upsertFallbackGarment(garment);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SAVE_ERROR_EVENT, { detail: e instanceof Error ? e : new Error(String(e)) }));
+    }
     throw e;
   }
 }
