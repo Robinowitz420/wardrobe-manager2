@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { asAuthError, requireFirebaseUser } from "@/lib/firebase/admin";
@@ -42,22 +41,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing files" }, { status: 400 });
   }
 
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-
   const saved: Array<{ src: string; fileName: string }> = [];
+
+  const { getStorage } = await import("firebase-admin/storage");
+  const bucket = getStorage().bucket();
 
   for (const file of files) {
     const buf = Buffer.from(await file.arrayBuffer());
     const originalName = typeof file.name === "string" && file.name ? file.name : "upload";
     const ext = extFromFileName(originalName) || ".jpg";
     const id = newId("img");
-    const diskName = `${id}${ext}`;
+    const objectPath = `uploads/${id}${ext}`;
 
-    const abs = path.join(uploadsDir, diskName);
-    await writeFile(abs, buf);
+    const object = bucket.file(objectPath);
+    await object.save(buf, {
+      contentType: typeof file.type === "string" && file.type ? file.type : "application/octet-stream",
+      resumable: false,
+    });
 
-    saved.push({ src: `/uploads/${diskName}`, fileName: originalName });
+    let src: string;
+    try {
+      await object.makePublic();
+      const encoded = objectPath.split("/").map(encodeURIComponent).join("/");
+      src = `https://storage.googleapis.com/${bucket.name}/${encoded}`;
+    } catch {
+      const [signed] = await object.getSignedUrl({
+        action: "read",
+        expires: Date.now() + 1000 * 60 * 60 * 24 * 365,
+      });
+      src = signed;
+    }
+
+    saved.push({ src, fileName: originalName });
   }
 
   return NextResponse.json({ files: saved });

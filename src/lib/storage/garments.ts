@@ -372,15 +372,24 @@ async function ensureBoot() {
 async function persistCreate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
+    const photos = Array.isArray(garment.photos)
+      ? garment.photos
+          .map((p: any) => ({ ...p, dataUrl: undefined }))
+          .filter((p: any) => typeof p?.src === "string" && p.src.trim())
+      : [];
+    if (Array.isArray(garment.photos) && garment.photos.length > 0 && photos.length === 0) {
+      throw new Error("Photo upload failed. Please retry on a stable connection.");
+    }
+    const { photos: _ignoredPhotos, ...attributes } = garment as any;
+
     const res = await authFetch("/api/garments", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      keepalive: true,
       body: JSON.stringify({
         id: garment.id,
         name: garment.name,
-        photos: garment.photos,
-        attributes: garment,
+        photos,
+        attributes,
         intakeSessionId: garment.intakeSessionId,
         intakeOrder: garment.intakeOrder,
         createdAt: garment.createdAt,
@@ -404,15 +413,24 @@ async function persistCreate(garment: Garment) {
 async function persistUpdate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
+    const photos = Array.isArray(garment.photos)
+      ? garment.photos
+          .map((p: any) => ({ ...p, dataUrl: undefined }))
+          .filter((p: any) => typeof p?.src === "string" && p.src.trim())
+      : [];
+    if (Array.isArray(garment.photos) && garment.photos.length > 0 && photos.length === 0) {
+      throw new Error("Photo upload failed. Please retry on a stable connection.");
+    }
+    const { photos: _ignoredPhotos, ...attributes } = garment as any;
+
     const res = await authFetch(`/api/garments/${encodeURIComponent(garment.id)}`,
       {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        keepalive: true,
         body: JSON.stringify({
           ...garment,
-          photos: garment.photos,
-          attributes: garment,
+          photos,
+          attributes,
         }),
       },
     );

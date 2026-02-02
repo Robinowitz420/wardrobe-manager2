@@ -32,6 +32,12 @@ function initAdmin() {
 
   initializeApp({
     credential: cert(svc),
+    storageBucket:
+      typeof process.env.FIREBASE_STORAGE_BUCKET === "string" && process.env.FIREBASE_STORAGE_BUCKET.trim()
+        ? process.env.FIREBASE_STORAGE_BUCKET.trim()
+        : typeof svc?.project_id === "string" && svc.project_id.trim()
+          ? `${svc.project_id.trim()}.appspot.com`
+          : undefined,
   });
 }
 
