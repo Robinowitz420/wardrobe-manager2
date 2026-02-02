@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 
 import { SAVE_ERROR_EVENT } from "@/lib/storage/garments";
 import { getFirebaseAuth } from "@/lib/firebase/client";
@@ -42,6 +42,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => window.removeEventListener(SAVE_ERROR_EVENT, handler);
   }, []);
 
+  async function onLogout() {
+    try {
+      const auth = getFirebaseAuth();
+      await signOut(auth);
+    } finally {
+      router.replace("/login");
+    }
+  }
+
   if (!ready) {
     return (
       <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
@@ -54,5 +63,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  return <>{children}</>;
+  return (
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+      <div className="mb-4 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => void onLogout()}
+          className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-sm transition hover:bg-muted"
+        >
+          Log out
+        </button>
+      </div>
+      {children}
+    </div>
+  );
 }
