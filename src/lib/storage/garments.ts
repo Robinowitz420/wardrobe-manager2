@@ -444,6 +444,15 @@ async function persistDelete(id: string) {
   if (typeof window === "undefined") return;
   try {
     const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (res.status === 404) {
+      // Idempotent delete: item may exist only in local fallback (or already deleted on the server).
+      try {
+        removeFallbackGarment(id);
+      } catch {
+        // ignore
+      }
+      return;
+    }
     if (!res.ok) {
       const json = (await res.json().catch(() => null)) as any;
       throw new Error(typeof json?.error === "string" ? json.error : "Failed to delete garment");
