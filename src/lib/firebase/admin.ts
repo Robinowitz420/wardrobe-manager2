@@ -80,9 +80,6 @@ export async function requireFirebaseUser(request: Request): Promise<AuthContext
   const { allowedUid, allowedEmail } = allowedConfig();
 
   if (!allowedUid && !allowedEmail) {
-    if (process.env.NODE_ENV === "production") {
-      throw new AuthError("Missing FIREBASE_ALLOWED_UID or FIREBASE_ALLOWED_EMAIL", 500);
-    }
     return { uid: decoded.uid, email: decoded.email };
   }
 

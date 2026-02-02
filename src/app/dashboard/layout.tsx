@@ -13,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [ready, setReady] = React.useState(false);
   const [user, setUser] = React.useState<User | null>(null);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -36,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const err = (e as CustomEvent<Error>).detail;
       const message = err?.message ?? "Could not save changes.";
       console.error("Wardrobe save failed:", err);
-      alert(`Could not save: ${message}`);
+      setSaveError(message);
     };
     window.addEventListener(SAVE_ERROR_EVENT, handler);
     return () => window.removeEventListener(SAVE_ERROR_EVENT, handler);
@@ -74,6 +75,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           Log out
         </button>
       </div>
+      {saveError && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm flex items-start justify-between">
+          <div>
+            <strong>Save failed:</strong> {saveError}
+          </div>
+          <button
+            type="button"
+            onClick={() => setSaveError(null)}
+            className="ml-4 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {children}
     </div>
   );
