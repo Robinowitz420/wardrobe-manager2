@@ -26,6 +26,20 @@ function computeCompletionStatus(name: string, photos: Garment["photos"]) {
   return hasPhoto && hasName ? "COMPLETE" : "DRAFT";
 }
 
+function normalizePhotosForStorage(photos: any): Garment["photos"] {
+  const safe = Array.isArray(photos) ? photos : [];
+  const filtered = safe
+    .map((p: any) => ({ ...p, dataUrl: undefined }))
+    .filter((p: any) => typeof p?.src === "string" && p.src.trim())
+    .slice(0, 5);
+
+  if (filtered.length > 0 && !filtered.some((p: any) => p?.isPrimary)) {
+    filtered[0] = { ...filtered[0], isPrimary: true };
+  }
+
+  return filtered as any;
+}
+
 function emitChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -60,9 +74,13 @@ function normalizeLegacyGarment(raw: any): Garment {
 
   if (typeof next?.position === "string" && next.position.trim()) {
     const v = next.position.trim();
-    next.position = (GARMENT_POSITIONS as readonly string[]).includes(v) ? v : undefined;
+    next.position = (GARMENT_POSITIONS as readonly string[]).includes(v) ? [v] : [];
+  } else if (Array.isArray(next?.position)) {
+    next.position = next.position
+      .map((x: any) => (typeof x === "string" ? x.trim() : ""))
+      .filter((x: string) => (GARMENT_POSITIONS as readonly string[]).includes(x));
   } else {
-    next.position = undefined;
+    next.position = [];
   }
 
   if (typeof next?.tier === "string" && next.tier.trim()) {
@@ -77,58 +95,10 @@ function normalizeLegacyGarment(raw: any): Garment {
     next.fit = [];
   }
 
-  if (typeof next?.care === "string" && next.care.trim()) {
-    next.care = [next.care.trim()];
-  } else if (!Array.isArray(next?.care)) {
-    next.care = [];
-  }
-
-  if (typeof next?.pattern === "string" && next.pattern.trim()) {
-    next.pattern = [next.pattern.trim()];
-  } else if (!Array.isArray(next?.pattern)) {
-    next.pattern = [];
-  }
-
-  if (typeof next?.texture === "string" && next.texture.trim()) {
-    next.texture = [next.texture.trim()];
-  } else if (!Array.isArray(next?.texture)) {
-    next.texture = [];
-  }
-
-  if (typeof next?.silhouette === "string" && next.silhouette.trim()) {
-    next.silhouette = [next.silhouette.trim()];
-  } else if (!Array.isArray(next?.silhouette)) {
-    next.silhouette = [];
-  }
-
-  if (typeof next?.length === "string" && next.length.trim()) {
-    next.length = [next.length.trim()];
-  } else if (!Array.isArray(next?.length)) {
-    next.length = [];
-  }
-
-  if (typeof next?.pockets === "string" && next.pockets.trim()) {
-    next.pockets = [next.pockets.trim()];
-  } else if (!Array.isArray(next?.pockets)) {
-    next.pockets = [];
-  }
-
   if (typeof next?.era === "string" && next.era.trim()) {
     next.era = [next.era.trim()];
   } else if (!Array.isArray(next?.era)) {
     next.era = [];
-  }
-
-  if (typeof next?.specialFeatures === "string" && next.specialFeatures.trim()) {
-    next.specialFeatures = [next.specialFeatures.trim()];
-  } else if (!Array.isArray(next?.specialFeatures)) {
-    next.specialFeatures = [];
-  }
-
-  if (typeof next?.enclosures === "string" && next.enclosures.trim()) {
-    next.enclosures = [next.enclosures.trim()];
-  } else if (!Array.isArray(next?.enclosures)) {
-    next.enclosures = [];
   }
 
   if (typeof next?.reviews === "string" && next.reviews.trim()) {
@@ -231,11 +201,7 @@ async function ensureBoot() {
 async function persistCreate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
-    const photos = Array.isArray(garment.photos)
-      ? garment.photos
-          .map((p: any) => ({ ...p, dataUrl: undefined }))
-          .filter((p: any) => typeof p?.src === "string" && p.src.trim())
-      : [];
+    const photos = normalizePhotosForStorage(garment.photos);
     if (Array.isArray(garment.photos) && garment.photos.length > 0 && photos.length === 0) {
       throw new Error("Photo upload failed. Please retry on a stable connection.");
     }
@@ -270,11 +236,7 @@ async function persistCreate(garment: Garment) {
 async function persistUpdate(garment: Garment) {
   if (typeof window === "undefined") return;
   try {
-    const photos = Array.isArray(garment.photos)
-      ? garment.photos
-          .map((p: any) => ({ ...p, dataUrl: undefined }))
-          .filter((p: any) => typeof p?.src === "string" && p.src.trim())
-      : [];
+    const photos = normalizePhotosForStorage(garment.photos);
     if (Array.isArray(garment.photos) && garment.photos.length > 0 && photos.length === 0) {
       throw new Error("Photo upload failed. Please retry on a stable connection.");
     }
@@ -356,10 +318,12 @@ export async function createGarment(input: GarmentCreateInput): Promise<Garment>
   const createdAt = nowIso();
   const sku = typeof input.sku === "string" && input.sku.trim() ? input.sku.trim() : generateSku();
   const name = typeof input.name === "string" && input.name.trim() ? input.name.trim() : "Untitled garment";
+  const photos = normalizePhotosForStorage((input as any).photos);
   const garment: Garment = {
     ...input,
     name,
-    completionStatus: computeCompletionStatus(name, input.photos as any),
+    photos: photos as any,
+    completionStatus: computeCompletionStatus(name, photos as any),
     sku,
     id: newId(),
     createdAt,
@@ -381,9 +345,11 @@ export function updateGarment(id: string, patch: Partial<Garment>): Garment | nu
   let updated: Garment | null = null;
   const next = cache.map((g) => {
     if (g.id !== id) return g;
+    const nextPhotos = "photos" in patch ? normalizePhotosForStorage((patch as any).photos) : g.photos;
     const merged = {
       ...g,
       ...patch,
+      photos: nextPhotos,
       id: g.id,
       createdAt: g.createdAt,
       updatedAt: nowIso(),

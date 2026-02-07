@@ -1,25 +1,23 @@
 import { z } from "zod";
 
 import {
-  CARE_INSTRUCTIONS,
   COLORS,
+  COLOR_TONES,
   ENCLOSURES,
   ERAS,
-  FABRICS,
-  FITS,
+  FABRIC_TYPES,
   GARMENT_CATEGORIES,
   GARMENT_LAYERS,
   GARMENT_POSITIONS,
   GARMENT_TYPES,
   INVENTORY_STATES,
   ITEM_TIERS,
-  LENGTHS,
+  LAUNDRY_DETAILS,
   PATTERNS,
   POCKETS,
-  SILHOUETTES,
   SPECIAL_FEATURES,
+  SIZES,
   TEXTURES,
-  TONES,
   VIBES,
 } from "@/constants/garment";
 
@@ -45,13 +43,13 @@ export const garmentSchema = z.object({
   state: z.enum(INVENTORY_STATES),
 
   layer: z.enum(GARMENT_LAYERS).optional(),
-  position: z.enum(GARMENT_POSITIONS).optional(),
+  position: z.array(z.enum(GARMENT_POSITIONS)).default([]),
 
   completionStatus: z.enum(["DRAFT", "COMPLETE"]).default("COMPLETE"),
   intakeSessionId: z.string().min(1).optional(),
   intakeOrder: z.number().int().nonnegative().optional(),
 
-  photos: z.array(garmentPhotoSchema).min(1).max(1),
+  photos: z.array(garmentPhotoSchema).min(1).max(5),
 
   // Vision-assisted suggestions (always editable)
   suggested: z
@@ -60,48 +58,39 @@ export const garmentSchema = z.object({
       category: z.enum(GARMENT_CATEGORIES).optional(),
       dominantColor: z.enum(COLORS).optional(),
       secondaryColor: z.enum(COLORS).optional(),
-      pattern: z.enum(PATTERNS).optional(),
-      texture: z.enum(TEXTURES).optional(),
-      silhouette: z.enum(SILHOUETTES).optional(),
-      length: z.enum(LENGTHS).optional(),
       notes: z.string().optional(),
     })
     .default({}),
 
   // Core identity
   sku: z.string().min(1).optional(),
-  garmentType: z.string().min(1).optional(),
+  garmentType: z.enum(GARMENT_TYPES).optional(),
   name: z.string().min(1),
   brand: z.string().optional(),
   dateAdded: z.string().min(1),
 
   // Size & fit
   size: z.string().optional(),
-  fit: z.array(z.string().min(1)).default([]),
+  fit: z.array(z.enum(SIZES)).default([]),
   specialFitNotes: z.string().optional(),
 
-  // Material & care (risk-critical: never inferred)
-  fabrics: z.array(z.string().min(1)).default([]),
-  care: z.array(z.string().min(1)).default([]),
-  careNotes: z.string().optional(),
-
   // Aesthetic metadata
-  vibes: z.array(z.string().min(1)).default([]),
-  colors: z.array(z.string().min(1)).default([]),
-  tones: z.array(z.string().min(1)).default([]),
-  pattern: z.array(z.string().min(1)).default([]),
-  texture: z.array(z.string().min(1)).default([]),
+  colors: z.array(z.enum(COLORS)).default([]),
 
-  silhouette: z.array(z.string().min(1)).default([]),
-  length: z.array(z.string().min(1)).default([]),
+  colorTones: z.array(z.enum(COLOR_TONES)).default([]),
 
-  // Construction details
-  specialFeatures: z.array(z.string().min(1)).default([]),
-  enclosures: z.array(z.string().min(1)).default([]),
-  pockets: z.array(z.string().min(1)).default([]),
+  pockets: z.array(z.enum(POCKETS)).default([]),
+  enclosures: z.array(z.enum(ENCLOSURES)).default([]),
+  patterns: z.array(z.enum(PATTERNS)).default([]),
+  specialFeatures: z.array(z.enum(SPECIAL_FEATURES)).default([]),
+  fabricTypes: z.array(z.enum(FABRIC_TYPES)).default([]),
+  texture: z.array(z.enum(TEXTURES)).default([]),
+  laundryDetails: z.array(z.enum(LAUNDRY_DETAILS)).default([]),
+
+  vibes: z.array(z.enum(VIBES)).default([]),
 
   // Era & story
-  era: z.array(z.string().min(1)).default([]),
+  era: z.array(z.enum(ERAS)).default([]),
   stories: z.string().optional(),
 
   reviews: z.array(garmentReviewSchema).default([]),

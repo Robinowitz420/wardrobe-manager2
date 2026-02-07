@@ -9,7 +9,6 @@ import type { GarmentPhoto } from "@/lib/validations/garment";
 type Props = {
   value: GarmentPhoto[];
   onChange: (next: GarmentPhoto[]) => void;
-  onBulkPick?: (files: File[]) => void;
 };
 
 function newId() {
@@ -73,8 +72,10 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
     .filter((x: any) => typeof x?.src === "string" && typeof x?.fileName === "string");
 }
 
-export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
+export function PhotoUploader({ value, onChange }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const MAX_PHOTOS = 5;
 
   function emitUploadError(err: unknown) {
     if (typeof window === "undefined") return;
@@ -85,26 +86,31 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
   async function onPickFiles(files: FileList | null) {
     if (!files) return;
 
-    if (onBulkPick && files.length > 1) {
-      const normalized = await Promise.all(Array.from(files).map((f) => normalizeImageFile(f)));
-      onBulkPick(normalized);
+    const existing = Array.isArray(value) ? value : [];
+    const remaining = Math.max(0, MAX_PHOTOS - existing.length);
+    if (remaining === 0) {
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    const first = Array.from(files)[0];
-    if (!first) return;
+    const picked = Array.from(files).slice(0, remaining);
+    const normalized = await Promise.all(picked.map((f) => normalizeImageFile(f)));
 
-    const normalized = await normalizeImageFile(first);
-
-    let next: GarmentPhoto[] = [];
+    let next: GarmentPhoto[] = existing.slice();
     try {
-      const uploaded = await uploadFilesToDisk([normalized]);
-      const u = uploaded[0];
-      if (u?.src && u?.fileName) {
-        next = [{ id: newId(), src: u.src, isPrimary: true, fileName: u.fileName }];
-      } else {
-        throw new Error("Upload failed");
+      const uploaded = await uploadFilesToDisk(normalized);
+      if (uploaded.length !== normalized.length) throw new Error("Upload failed");
+
+      const incoming: GarmentPhoto[] = uploaded.map((u) => {
+        if (!u?.src || !u?.fileName) throw new Error("Upload failed");
+        return { id: newId(), src: u.src, isPrimary: false, fileName: u.fileName };
+      });
+
+      next = [...next, ...incoming].slice(0, MAX_PHOTOS);
+
+      const hasPrimary = next.some((p) => p.isPrimary);
+      if (!hasPrimary && next.length > 0) {
+        next[0] = { ...next[0], isPrimary: true };
       }
     } catch (e) {
       emitUploadError(e);
@@ -118,7 +124,16 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
   }
 
   function remove(id: string) {
-    onChange(value.filter((p) => p.id !== id));
+    const next = value.filter((p) => p.id !== id);
+    if (next.length > 0 && !next.some((p) => p.isPrimary)) {
+      next[0] = { ...next[0], isPrimary: true };
+    }
+    onChange(next);
+  }
+
+  function setPrimary(id: string) {
+    const next = value.map((p) => ({ ...p, isPrimary: p.id === id }));
+    onChange(next);
   }
 
   function onDrop(e: React.DragEvent) {
@@ -131,7 +146,7 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <div className="text-base font-medium">Photos</div>
-          <div className="text-base text-muted-foreground">1 image per item. Select multiple photos to start bulk intake. HEIC/HEIF will be converted to JPEG.</div>
+          <div className="text-base text-muted-foreground">Up to 5 photos per garment. HEIC/HEIF will be converted to JPEG.</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -163,27 +178,46 @@ export function PhotoUploader({ value, onChange, onBulkPick }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          {value.map((p) => (
-            <div key={p.id} className="space-y-2">
-              <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
-                <img src={p.src ?? p.dataUrl ?? ""} alt="Garment" className="h-full w-full object-contain" />
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  {p.fileName ? (
-                    <div className="truncate text-[11px] text-muted-foreground">{p.fileName}</div>
-                  ) : null}
-                </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {value.map((p) => (
+              <div key={p.id} className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => remove(p.id)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setPrimary(p.id)}
+                  className={
+                    p.isPrimary
+                      ? "relative flex h-56 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-primary bg-muted"
+                      : "relative flex h-56 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-muted"
+                  }
                 >
-                  Remove
+                  <img src={p.src ?? p.dataUrl ?? ""} alt="Garment" className="h-full w-full object-contain" />
+                  {p.isPrimary ? (
+                    <div className="absolute left-2 top-2 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">
+                      Primary
+                    </div>
+                  ) : null}
                 </button>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    {p.fileName ? (
+                      <div className="truncate text-[11px] text-muted-foreground">{p.fileName}</div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => remove(p.id)}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            {value.length}/{MAX_PHOTOS} photos
+          </div>
         </div>
       )}
 

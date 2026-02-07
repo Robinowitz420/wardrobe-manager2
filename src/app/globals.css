@@ -2,33 +2,33 @@
 
 :root {
   /* Base colors */
-  --background: 36 33% 97%;
-  --foreground: 250 12% 10%;
+  --background: 210 55% 97%;
+  --foreground: 250 18% 12%;
   
   /* Card & surface colors */
-  --card: 36 25% 95%;
-  --card-foreground: 250 12% 10%;
-  --popover: 36 25% 95%;
-  --popover-foreground: 250 12% 10%;
+  --card: 325 55% 96%;
+  --card-foreground: 250 18% 12%;
+  --popover: 210 55% 96%;
+  --popover-foreground: 250 18% 12%;
   
   /* Primary brand colors */
   /* Inky neutral */
-  --primary: 258 18% 14%;
+  --primary: 268 62% 62%;
   --primary-foreground: 0 0% 100%;
   
   /* Secondary colors */
   /* Muted plum */
-  --secondary: 270 18% 90%;
-  --secondary-foreground: 258 18% 14%;
+  --secondary: 196 70% 92%;
+  --secondary-foreground: 250 18% 12%;
   
   /* Muted/disabled colors */
-  --muted: 36 18% 92%;
-  --muted-foreground: 250 8% 34%;
+  --muted: 210 30% 93%;
+  --muted-foreground: 250 10% 38%;
   
   /* Accent colors */
   /* Low-sat editorial accent */
-  --accent: 262 14% 90%;
-  --accent-foreground: 258 18% 14%;
+  --accent: 142 60% 92%;
+  --accent-foreground: 250 18% 12%;
   
   /* Status colors */
   /* Green */
@@ -40,10 +40,10 @@
   --destructive-foreground: 0 0% 100%;
   
   /* UI element colors */
-  --border: 30 16% 82%;
-  --input: 30 16% 80%;
+  --border: 250 14% 86%;
+  --input: 250 14% 86%;
   /* Focus ring (ink/plum) */
-  --ring: 270 22% 36%;
+  --ring: 268 70% 62%;
   
   /* Border radius */
   --radius: 0.5rem;
@@ -197,11 +197,282 @@ button,
 }
 
 button[data-active="true"] {
-  outline: 4px solid red !important;
+  outline: 2px solid hsl(var(--ring) / 0.55) !important;
   outline-offset: 2px;
-  background: #dc2626 !important;
-  border-color: #dc2626 !important;
-  color: white !important;
+  background: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+button.bubble-toggle[data-active="true"],
+button.bubble-chip[data-active="true"],
+button.bubble-button[data-active="true"],
+button.vibe-toggle[data-active="true"] {
+  background: radial-gradient(
+    circle at 30% 25%,
+    hsl(var(--bubble-bg-1-active, var(--bubble-bg-1, var(--card)))) 0%,
+    hsl(var(--bubble-bg-2-active, var(--bubble-bg-2, var(--background)))) 70%
+  ) !important;
+  color: hsl(var(--bubble-text-color, var(--foreground))) !important;
+  border-color: hsl(var(--bubble-rim-color, var(--ring))) !important;
+}
+
+
+.bubble-field {
+  --bubble-size: 88px;
+  --bubble-rim: 3px;
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px;
+  border: var(--bubble-rim) solid hsl(var(--bubble-rim-color, var(--ring))) !important;
+  background: radial-gradient(
+    circle at 30% 25%,
+    hsl(var(--bubble-bg-1, var(--card))) 0%,
+    hsl(var(--bubble-bg-2, var(--background))) 70%
+  ) !important;
+  box-shadow:
+    0 18px 40px hsl(var(--primary) / 0.12),
+    0 1px 0 hsl(var(--foreground) / 0.06) inset;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.bubble-field:focus-within {
+  transform: scale(1.07);
+  filter: saturate(1.05);
+  box-shadow:
+    0 22px 55px hsl(var(--primary) / 0.18),
+    0 0 0 4px hsl(var(--ring) / 0.18);
+}
+
+.bubble-input,
+.bubble-select,
+.bubble-textarea {
+  width: 100%;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0.35rem 0.7rem;
+  border-radius: 9999px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.bubble-textarea {
+  height: calc(var(--bubble-size) - (var(--bubble-rim) * 2) - 20px);
+  resize: none;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  line-height: 1.2;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+}
+
+.bubble-mini-header {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  padding: 0.45rem 1rem;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.bubble-section-title {
+  font-size: 2.6rem;
+  line-height: 1.1;
+}
+
+.bubble-notes-display {
+  width: 100%;
+  height: calc(var(--bubble-size) - (var(--bubble-rim) * 2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+.bubble-rainbow {
+  border: 3px solid transparent !important;
+  background:
+    radial-gradient(
+      circle at 30% 25%,
+      hsl(var(--bubble-bg-1, var(--card))) 0%,
+      hsl(var(--bubble-bg-2, var(--background))) 70%
+    ) padding-box,
+    conic-gradient(
+      from 140deg,
+      hsl(330 85% 66%),
+      hsl(268 80% 62%),
+      hsl(196 85% 55%),
+      hsl(142 70% 45%),
+      hsl(38 95% 55%),
+      hsl(56 95% 60%),
+      hsl(330 85% 66%)
+    ) border-box !important;
+}
+
+.bubble-autosize {
+  width: 100%;
+}
+
+.bubble-button {
+  --bubble-size: 84px;
+  --bubble-rim: 3px;
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px;
+  border: var(--bubble-rim) solid hsl(var(--bubble-rim-color, var(--ring)));
+  background: radial-gradient(
+    circle at 30% 25%,
+    hsl(var(--bubble-bg-1, var(--card))) 0%,
+    hsl(var(--bubble-bg-2, var(--background))) 70%
+  );
+  box-shadow:
+    0 18px 40px hsl(var(--primary) / 0.12),
+    0 1px 0 hsl(var(--foreground) / 0.06) inset;
+  display: grid;
+  place-items: center;
+  padding: 0.6rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bubble-button:active {
+  transform: scale(0.98);
+}
+
+.bubble-chip {
+  border-radius: 9999px;
+  border: 3px solid hsl(var(--bubble-rim-color, var(--ring))) !important;
+  background: hsl(var(--bubble-bg-1, var(--card))) !important;
+}
+
+.bubble-toggle {
+  --bubble-size: 72px;
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px;
+  border: 3px solid hsl(var(--bubble-rim-color, var(--ring))) !important;
+  background: radial-gradient(
+    circle at 30% 25%,
+    hsl(var(--bubble-bg-1, var(--card))) 0%,
+    hsl(var(--bubble-bg-2, var(--background))) 70%
+  ) !important;
+  box-shadow: 0 10px 24px hsl(var(--primary) / 0.10);
+  display: grid;
+  place-items: center;
+  padding: 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bubble-toggle[data-active="true"] {
+  border-color: hsl(var(--bubble-rim-color, var(--ring)));
+  box-shadow:
+    0 14px 32px hsl(var(--primary) / 0.18),
+    0 0 0 4px hsl(var(--ring) / 0.12);
+}
+
+.vibe-toggle {
+  --vibe-w: 170px;
+  --vibe-h: 118px;
+  width: var(--vibe-w);
+  height: var(--vibe-h);
+  border-radius: 18px;
+  padding: 5px;
+  box-sizing: border-box;
+  border: 3px solid hsl(var(--bubble-rim-color, var(--ring))) !important;
+  background: radial-gradient(
+    circle at 30% 25%,
+    hsl(var(--bubble-bg-1, var(--card))) 0%,
+    hsl(var(--bubble-bg-2, var(--background))) 70%
+  ) !important;
+  box-shadow: 0 10px 24px hsl(var(--primary) / 0.10);
+  display: grid;
+  place-items: center;
+}
+
+.vibe-toggle-image {
+  width: calc(var(--vibe-w) - 10px);
+  height: calc(var(--vibe-h) - 10px);
+  border-radius: 14px;
+  object-fit: contain;
+  display: block;
+}
+
+@keyframes bubblePulseBorder {
+  0% {
+    border-width: 3px;
+    border-color: hsl(var(--bubble-rim-color, var(--ring)));
+  }
+  50% {
+    border-width: 5px;
+    border-color: hsl(var(--bubble-rim-color, var(--ring)));
+  }
+  100% {
+    border-width: 3px;
+    border-color: hsl(var(--bubble-rim-color, var(--ring)));
+  }
+}
+
+.fx-pulse-border {
+  box-sizing: border-box;
+  transition: border-color 300ms ease, border-width 300ms ease;
+}
+
+.fx-pulse-border:focus-within {
+  animation: bubblePulseBorder 900ms ease-in-out infinite;
+}
+
+.fx-pulse-border:focus-visible {
+  animation: bubblePulseBorder 900ms ease-in-out infinite;
+}
+
+.fx-hover-lift {
+  transition: transform 300ms ease, box-shadow 300ms ease;
+  will-change: transform;
+}
+
+.fx-hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 22px 55px hsl(var(--primary) / 0.16),
+    0 1px 0 hsl(var(--foreground) / 0.06) inset;
+}
+
+.fx-focus-glow {
+  transition: box-shadow 300ms ease, border-color 300ms ease;
+}
+
+.fx-focus-glow:focus-within {
+  box-shadow:
+    0 22px 55px hsl(var(--primary) / 0.20),
+    0 0 0 6px hsl(var(--bubble-rim-color) / 0.18);
+}
+
+.fx-focus-glow:focus-visible {
+  box-shadow:
+    0 22px 55px hsl(var(--primary) / 0.20),
+    0 0 0 6px hsl(var(--bubble-rim-color) / 0.18);
 }
 
 /* Focus states */
