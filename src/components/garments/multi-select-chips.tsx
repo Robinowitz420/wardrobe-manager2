@@ -281,7 +281,7 @@ export function MultiSelectChips<T extends string>({
                     src={imageSrc}
                     alt={String(opt)}
                     loading="lazy"
-                    className="vibe-toggle-image"
+                    className={`vibe-toggle-image transition-all duration-200 ${active ? "opacity-100" : "opacity-30"}`}
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).style.display = "none";
                     }}
