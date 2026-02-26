@@ -9,8 +9,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export async function POST(request: NextRequest, ctx: { params: { id: string } }) {
-  const params = await Promise.resolve(ctx.params as any);
+export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params;
   const id = typeof params?.id === "string" ? params.id : "";
 
   if (!id) {
