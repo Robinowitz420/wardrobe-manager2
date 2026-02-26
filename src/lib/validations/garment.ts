@@ -2,22 +2,13 @@ import { z } from "zod";
 
 import {
   COLORS,
-  COLOR_TONES,
-  ENCLOSURES,
-  ERAS,
   FABRIC_TYPES,
   GARMENT_CATEGORIES,
-  GARMENT_LAYERS,
-  GARMENT_POSITIONS,
   GARMENT_TYPES,
   INVENTORY_STATES,
-  ITEM_TIERS,
-  LAUNDRY_DETAILS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
-  SIZES,
-  TEXTURES,
   VIBES,
 } from "@/constants/garment";
 
@@ -41,9 +32,6 @@ export const garmentSchema = z.object({
   updatedAt: z.string().min(1),
 
   state: z.enum(INVENTORY_STATES),
-
-  layer: z.enum(GARMENT_LAYERS).optional(),
-  position: z.array(z.enum(GARMENT_POSITIONS)).default([]),
 
   completionStatus: z.enum(["DRAFT", "COMPLETE"]).default("COMPLETE"),
   intakeSessionId: z.string().min(1).optional(),
@@ -69,28 +57,20 @@ export const garmentSchema = z.object({
   brand: z.string().optional(),
   dateAdded: z.string().min(1),
 
-  // Size & fit
+  // Size
   size: z.string().optional(),
-  fit: z.array(z.enum(SIZES)).default([]),
-  specialFitNotes: z.string().optional(),
 
   // Aesthetic metadata
   colors: z.array(z.enum(COLORS)).default([]),
 
-  colorTones: z.array(z.enum(COLOR_TONES)).default([]),
-
   pockets: z.array(z.enum(POCKETS)).default([]),
-  enclosures: z.array(z.enum(ENCLOSURES)).default([]),
   patterns: z.array(z.enum(PATTERNS)).default([]),
   specialFeatures: z.array(z.enum(SPECIAL_FEATURES)).default([]),
   fabricTypes: z.array(z.enum(FABRIC_TYPES)).default([]),
-  texture: z.array(z.enum(TEXTURES)).default([]),
-  laundryDetails: z.array(z.enum(LAUNDRY_DETAILS)).default([]),
 
   vibes: z.array(z.enum(VIBES)).default([]),
 
-  // Era & story
-  era: z.array(z.enum(ERAS)).default([]),
+  // Story
   stories: z.string().optional(),
 
   reviews: z.array(garmentReviewSchema).default([]),
@@ -98,7 +78,6 @@ export const garmentSchema = z.object({
   // Economics (manual)
   glitcoinBorrow: z.number().int().nonnegative().optional(),
   glitcoinLustLost: z.number().int().nonnegative().optional(),
-  tier: z.array(z.string().min(1)).default([]),
 
   // Notes
   internalNotes: z.string().optional(),

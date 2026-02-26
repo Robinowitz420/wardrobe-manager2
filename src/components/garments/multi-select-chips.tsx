@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
-import { ENCLOSURE_BUTTON_IMAGE_MAP, POCKET_BUTTON_IMAGE_MAP } from "@/constants/garment";
+import { POCKET_BUTTON_IMAGE_MAP } from "@/constants/garment";
 
 import { authFetch } from "@/lib/firebase/auth-fetch";
 
@@ -82,7 +82,6 @@ export function MultiSelectChips<T extends string>({
   const useVibeImages = categoryKey === "vibes";
   const useEraImages = categoryKey === "era";
   const usePocketImages = categoryKey === "pockets";
-  const useEnclosureImages = categoryKey === "enclosures";
   const useRectImages = useVibeImages || useEraImages;
 
   const selectedLower = React.useMemo(() => {
@@ -249,11 +248,9 @@ export function MultiSelectChips<T extends string>({
               ? `/Era%20Buttons/B/${encodeURIComponent(toKebabCase(String(opt)))}.jpg`
               : usePocketImages
                 ? `/PocketsButtons/${encodeURIComponent((POCKET_BUTTON_IMAGE_MAP as any)[String(opt)] ?? "")}`
-                : useEnclosureImages
-                  ? `/EnclosureButtons/${encodeURIComponent((ENCLOSURE_BUTTON_IMAGE_MAP as any)[String(opt)] ?? "")}`
-                  : null;
+                : null;
           const style = {
-            ...(!(useRectImages || usePocketImages || useEnclosureImages) ? bubbleSizeForLabel(String(opt)) : {}),
+            ...(!(useRectImages || usePocketImages) ? bubbleSizeForLabel(String(opt)) : {}),
             ...(active && fill
               ? {
                   ['--bubble-bg-1' as any]: fill.bg1,
@@ -274,8 +271,8 @@ export function MultiSelectChips<T extends string>({
               style={style}
               className={
                 active
-                  ? `${useRectImages || usePocketImages || useEnclosureImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
-                  : `${useRectImages || usePocketImages || useEnclosureImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
+                  ? `${useRectImages || usePocketImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
+                  : `${useRectImages || usePocketImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
               }
             >
               {imageSrc ? (

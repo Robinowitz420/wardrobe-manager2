@@ -6,24 +6,14 @@ import { useRouter } from "next/navigation";
 import { authFetch } from "@/lib/firebase/auth-fetch";
 import {
   COLORS,
-  COLOR_TONES,
-  COLOR_TONE_IMAGE_MAP,
-  ENCLOSURES,
-  ERAS,
   FABRIC_TYPES,
   GARMENT_TYPE_BUTTONS,
   GARMENT_TYPE_BUTTON_IMAGE_MAP,
   GARMENT_TYPES,
-  GARMENT_LAYERS,
-  GARMENT_POSITIONS,
   INVENTORY_STATES,
-  ITEM_TIERS,
-  LAUNDRY_DETAILS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
-  SIZES,
-  TEXTURES,
   VIBES,
 } from "@/constants/garment";
 import { PhotoUploader } from "@/components/garments/photo-uploader";
@@ -50,33 +40,21 @@ function blankGarmentForm(): GarmentCreateInput {
     brand: "",
     dateAdded: nowIso().slice(0, 10),
 
-    layer: undefined,
-    position: [],
-
     size: "",
-    fit: [],
-    specialFitNotes: "",
     colors: [],
-    colorTones: [],
 
     pockets: [],
-    enclosures: [],
     patterns: [],
     specialFeatures: [],
     fabricTypes: [],
-    texture: [],
-    laundryDetails: [],
 
     vibes: [],
-
-    era: [],
     stories: "",
 
     reviews: [],
 
     glitcoinBorrow: undefined,
     glitcoinLustLost: undefined,
-    tier: [],
 
     internalNotes: "",
   };
@@ -178,10 +156,6 @@ export default function NewGarmentPage() {
 
   const [form, setForm] = React.useState<GarmentCreateInput>(() => blankGarmentForm());
 
-  const [specialNotesBubbleSize, setSpecialNotesBubbleSize] = React.useState<number>(120);
-  const [specialNotesFocused, setSpecialNotesFocused] = React.useState(false);
-  const specialNotesRef = React.useRef<HTMLTextAreaElement | null>(null);
-
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -212,27 +186,6 @@ export default function NewGarmentPage() {
       alive = false;
     };
   }, [editId]);
-
-  
-
-  React.useEffect(() => {
-    const text = String(form.specialFitNotes ?? "");
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setSpecialNotesBubbleSize(120);
-      return;
-    }
-
-    const lines = text.split(/\r\n|\n|\r/).length;
-    const approx = Math.min(260, Math.max(140, 110 + trimmed.length * 1.2 + lines * 26));
-
-    // Pulse to 3x, then settle to content-fit size.
-    setSpecialNotesBubbleSize(360);
-    const t = window.setTimeout(() => {
-      setSpecialNotesBubbleSize(approx);
-    }, 180);
-    return () => window.clearTimeout(t);
-  }, [form.specialFitNotes]);
 
   function onClear() {
     setError(null);
@@ -437,60 +390,6 @@ export default function NewGarmentPage() {
               </label>
 
               <label className="grid gap-1">
-                <span className="bubble-mini-header">Layer</span>
-                <div className="mt-1 grid grid-cols-2 gap-2">
-                  {GARMENT_LAYERS.map((opt) => {
-                    const active = form.layer === opt;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setField("layer", (active ? undefined : opt) as any)}
-                        data-active={active ? "true" : "false"}
-                        style={{ ['--bubble-size' as any]: "84px" }}
-                        className={
-                          active
-                            ? `bubble-toggle bubble-chip ${bubbleEffectsForSeed(`new:layer:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm`
-                            : `bubble-toggle bubble-chip ${bubbleEffectsForSeed(`new:layer:${String(opt)}`)} bg-card text-foreground/80 shadow-sm hover:bg-muted`
-                        }
-                      >
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-              </label>
-
-              <label className="grid gap-1">
-                <span className="bubble-mini-header">Top / Bottom</span>
-                <div className="mt-1 grid grid-cols-2 gap-2">
-                  {GARMENT_POSITIONS.map((opt) => {
-                    const active = Array.isArray(form.position) && form.position.includes(opt as any);
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          const prev = Array.isArray(form.position) ? (form.position as any[]) : [];
-                          const next = active ? prev.filter((x) => x !== opt) : [...prev, opt];
-                          setField("position", next as any);
-                        }}
-                        data-active={active ? "true" : "false"}
-                        style={{ ['--bubble-size' as any]: "84px" }}
-                        className={
-                          active
-                            ? `bubble-toggle bubble-chip ${bubbleEffectsForSeed(`new:position:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm`
-                            : `bubble-toggle bubble-chip ${bubbleEffectsForSeed(`new:position:${String(opt)}`)} bg-card text-foreground/80 shadow-sm hover:bg-muted`
-                        }
-                      >
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-              </label>
-
-              <label className="grid gap-1">
                 <span className="bubble-mini-header">Inventory state</span>
                 <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {INVENTORY_STATES.map((s) => {
@@ -514,19 +413,6 @@ export default function NewGarmentPage() {
                   })}
                 </div>
               </label>
-
-              <label className="grid gap-1">
-                <span className="bubble-mini-header">Item tier</span>
-                <div className="mt-1">
-                  <MultiSelectChips
-                    label=""
-                    categoryKey="tier"
-                    options={ITEM_TIERS}
-                    value={form.tier as any}
-                    onChange={(next) => setField("tier", next as any)}
-                  />
-                </div>
-              </label>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -542,51 +428,6 @@ export default function NewGarmentPage() {
                     onChange={(e) => setField("size", e.target.value)}
                     placeholder="e.g., S / 8 / 27"
                   />
-                </div>
-              </label>
-
-              <label className="grid gap-1">
-                <span className="bubble-mini-header">Fit</span>
-                <div className="mt-1">
-                  <MultiSelectChips
-                    label=""
-                    categoryKey="fit"
-                    options={SIZES}
-                    value={form.fit as any}
-                    onChange={(next) => setField("fit", next as any)}
-                  />
-                </div>
-              </label>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 sm:col-span-2">
-                <span className="bubble-mini-header">Special fit notes</span>
-                <div
-                  className={`bubble-field ${bubbleEffectsForSeed("new:special-fit-notes")}`}
-                  style={{ ['--bubble-size' as any]: `${specialNotesBubbleSize}px` }}
-                >
-                  {!specialNotesFocused && String(form.specialFitNotes ?? "").trim() ? (
-                    <button
-                      type="button"
-                      className="bubble-notes-display"
-                      onClick={() => {
-                        setSpecialNotesFocused(true);
-                        window.setTimeout(() => specialNotesRef.current?.focus(), 0);
-                      }}
-                    >
-                      {String(form.specialFitNotes ?? "")}
-                    </button>
-                  ) : (
-                    <textarea
-                      ref={specialNotesRef}
-                      className="bubble-textarea"
-                      value={form.specialFitNotes ?? ""}
-                      onFocus={() => setSpecialNotesFocused(true)}
-                      onBlur={() => setSpecialNotesFocused(false)}
-                      onChange={(e) => setField("specialFitNotes", e.target.value)}
-                    />
-                  )}
                 </div>
               </label>
             </div>
@@ -610,16 +451,6 @@ export default function NewGarmentPage() {
                   options={POCKETS}
                   value={(form as any).pockets ?? ([] as any)}
                   onChange={(next) => setField("pockets" as any, next as any)}
-                />
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-4">
-                <MultiSelectChips
-                  label="Enclosures"
-                  categoryKey="enclosures"
-                  options={ENCLOSURES}
-                  value={(form as any).enclosures ?? ([] as any)}
-                  onChange={(next) => setField("enclosures" as any, next as any)}
                 />
               </div>
 
@@ -653,43 +484,6 @@ export default function NewGarmentPage() {
                 />
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-4">
-                <MultiSelectChips
-                  label="Texture"
-                  categoryKey="texture"
-                  options={TEXTURES}
-                  value={(form as any).texture ?? ([] as any)}
-                  onChange={(next) => setField("texture" as any, next as any)}
-                />
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-4">
-                <MultiSelectChips
-                  label="Laundry details"
-                  categoryKey="laundryDetails"
-                  options={LAUNDRY_DETAILS}
-                  value={(form as any).laundryDetails ?? ([] as any)}
-                  onChange={(next) => setField("laundryDetails" as any, next as any)}
-                />
-              </div>
-
-              <div
-                className="rounded-xl border border-border bg-card p-4"
-                style={{
-                  ['--bubble-rim-color' as any]: "38 95% 55%",
-                  ['--bubble-bg-1' as any]: "38 100% 95%",
-                  ['--bubble-bg-2' as any]: "56 100% 92%",
-                }}
-              >
-                <MultiSelectChips
-                  label="Era"
-                  categoryKey="era"
-                  options={ERAS}
-                  value={form.era as any}
-                  onChange={(next) => setField("era", next as any)}
-                />
-              </div>
-
               <div
                 className="rounded-xl border border-border bg-card p-4"
                 style={{
@@ -705,68 +499,6 @@ export default function NewGarmentPage() {
                   value={(form as any).vibes ?? ([] as any)}
                   onChange={(next) => setField("vibes" as any, next as any)}
                 />
-              </div>
-
-              <div
-                className="rounded-xl border border-border bg-card p-4"
-                style={{
-                  ['--bubble-rim-color' as any]: "268 80% 62%",
-                  ['--bubble-bg-1' as any]: "268 90% 96%",
-                  ['--bubble-bg-2' as any]: "196 95% 96%",
-                }}
-              >
-                <h3 className="text-2xl font-bold">
-                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
-                    Color tones
-                  </span>
-                </h3>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {Array.isArray((form as any).colorTones) && (form as any).colorTones.length
-                    ? (form as any).colorTones.join(", ")
-                    : "none"}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {COLOR_TONES.map((opt) => {
-                    const prev = Array.isArray((form as any).colorTones) ? ((form as any).colorTones as any[]) : [];
-                    const active = prev.includes(opt as any);
-                    const file = (COLOR_TONE_IMAGE_MAP as any)[opt] as string;
-                    const src = `/ColorTones/${encodeURIComponent(file)}`;
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          const next = active ? prev.filter((x) => x !== opt) : [...prev, opt];
-                          setField("colorTones" as any, next as any);
-                        }}
-                        data-active={active ? "true" : "false"}
-                        className={
-                          active
-                            ? `vibe-toggle ${bubbleEffectsForSeed(`new:colorTones:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
-                            : `vibe-toggle ${bubbleEffectsForSeed(`new:colorTones:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
-                        }
-                      >
-                        <span className="relative grid h-full w-full place-items-center">
-                          <img
-                            src={src}
-                            alt={String(opt)}
-                            loading="lazy"
-                            className="vibe-toggle-image"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = "none";
-                            }}
-                          />
-                          <span
-                            className="pointer-events-none absolute px-2 text-center text-[0.75rem] font-semibold leading-tight"
-                            style={{ opacity: active ? 0.08 : 0.12 }}
-                          >
-                            {opt}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
           </section>

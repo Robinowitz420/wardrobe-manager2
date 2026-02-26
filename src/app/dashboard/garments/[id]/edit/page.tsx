@@ -6,23 +6,13 @@ import { useRouter, useParams } from "next/navigation";
 
 import {
   COLORS,
-  COLOR_TONES,
-  COLOR_TONE_IMAGE_MAP,
-  ENCLOSURES,
-  ERAS,
   FABRIC_TYPES,
-  GARMENT_LAYERS,
-  GARMENT_POSITIONS,
   GARMENT_TYPE_BUTTONS,
   GARMENT_TYPE_BUTTON_IMAGE_MAP,
   INVENTORY_STATES,
-  ITEM_TIERS,
-  LAUNDRY_DETAILS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
-  SIZES,
-  TEXTURES,
   VIBES,
 } from "@/constants/garment";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
@@ -41,23 +31,14 @@ export default function GarmentEditPage() {
   const [brand, setBrand] = React.useState("");
   const [garmentType, setGarmentType] = React.useState<string>("");
   const [state, setState] = React.useState<string>("");
-  const [layer, setLayer] = React.useState<string>("");
-  const [position, setPosition] = React.useState<any[]>([]);
-  const [tier, setTier] = React.useState<string>("");
   const [glitcoinBorrow, setGlitcoinBorrow] = React.useState<string>("");
   const [glitcoinLustLost, setGlitcoinLustLost] = React.useState<string>("");
   const [stories, setStories] = React.useState("");
   const [colors, setColors] = React.useState<any[]>([]);
-  const [colorTones, setColorTones] = React.useState<any[]>([]);
   const [pockets, setPockets] = React.useState<any[]>([]);
-  const [enclosures, setEnclosures] = React.useState<any[]>([]);
   const [patterns, setPatterns] = React.useState<any[]>([]);
   const [specialFeatures, setSpecialFeatures] = React.useState<any[]>([]);
   const [fabricTypes, setFabricTypes] = React.useState<any[]>([]);
-  const [texture, setTexture] = React.useState<any[]>([]);
-  const [laundryDetails, setLaundryDetails] = React.useState<any[]>([]);
-  const [sizes, setSizes] = React.useState<any[]>([]);
-  const [era, setEra] = React.useState<any[]>([]);
   const [vibes, setVibes] = React.useState<any[]>([]);
 
   React.useEffect(() => {
@@ -75,9 +56,6 @@ export default function GarmentEditPage() {
       setBrand(found?.brand ?? "");
       setGarmentType(typeof (found as any)?.garmentType === "string" ? (found as any).garmentType : "");
       setState(found?.state ?? "Available");
-      setLayer(typeof (found as any)?.layer === "string" ? (found as any).layer : "");
-      setPosition(Array.isArray((found as any)?.position) ? (found as any).position : typeof (found as any)?.position === "string" ? [(found as any).position] : []);
-      setTier(Array.isArray(found?.tier) ? found!.tier.join(", ") : "");
       setGlitcoinBorrow(
         typeof found?.glitcoinBorrow === "number" ? String(found.glitcoinBorrow) : "",
       );
@@ -86,16 +64,10 @@ export default function GarmentEditPage() {
       );
       setStories(found?.stories ?? "");
       setColors(Array.isArray(found?.colors) ? found.colors : []);
-      setColorTones(Array.isArray((found as any)?.colorTones) ? (found as any).colorTones : []);
       setPockets(Array.isArray((found as any)?.pockets) ? (found as any).pockets : []);
-      setEnclosures(Array.isArray((found as any)?.enclosures) ? (found as any).enclosures : []);
       setPatterns(Array.isArray((found as any)?.patterns) ? (found as any).patterns : []);
       setSpecialFeatures(Array.isArray((found as any)?.specialFeatures) ? (found as any).specialFeatures : []);
       setFabricTypes(Array.isArray((found as any)?.fabricTypes) ? (found as any).fabricTypes : []);
-      setTexture(Array.isArray((found as any)?.texture) ? (found as any).texture : []);
-      setLaundryDetails(Array.isArray((found as any)?.laundryDetails) ? (found as any).laundryDetails : []);
-      setSizes(Array.isArray((found as any)?.fit) ? (found as any).fit : []);
-      setEra(Array.isArray((found as any)?.era) ? (found as any).era : []);
       setVibes(Array.isArray((found as any)?.vibes) ? (found as any).vibes : []);
     };
 
@@ -126,29 +98,14 @@ export default function GarmentEditPage() {
       brand,
       garmentType: garmentType.trim() ? (garmentType as any) : undefined,
       state: state as any,
-      layer: layer.trim() ? (layer as any) : undefined,
-      position: Array.isArray(position) ? (position as any) : ([] as any),
-      tier:
-        tier.trim()
-          ? (tier
-              .split(",")
-              .map((x) => x.trim())
-              .filter(Boolean) as any)
-          : ([] as any),
       glitcoinBorrow: glitcoinBorrow === "" ? undefined : Number(glitcoinBorrow),
       glitcoinLustLost: glitcoinLustLost === "" ? undefined : Number(glitcoinLustLost),
       stories,
       colors: colors as any,
-      colorTones: colorTones as any,
       pockets: pockets as any,
-      enclosures: enclosures as any,
       patterns: patterns as any,
       specialFeatures: specialFeatures as any,
       fabricTypes: fabricTypes as any,
-      texture: texture as any,
-      laundryDetails: laundryDetails as any,
-      fit: sizes as any,
-      era: era as any,
       vibes: vibes as any,
     });
 
@@ -323,45 +280,6 @@ export default function GarmentEditPage() {
                 ))}
               </select>
             </label>
-
-            <label className="grid gap-1">
-              <span className="bubble-mini-header">Layer</span>
-              <select
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-                value={layer}
-                onChange={(e) => setLayer(e.target.value)}
-              >
-                <option value="">—</option>
-                {GARMENT_LAYERS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-1">
-              <span className="bubble-mini-header">Top / Bottom</span>
-              <div className="mt-1">
-                <MultiSelectChips
-                  label=""
-                  categoryKey="position"
-                  options={GARMENT_POSITIONS}
-                  value={position as any}
-                  onChange={(next) => setPosition(next as any)}
-                />
-              </div>
-            </label>
-
-            <label className="grid gap-1">
-              <span className="bubble-mini-header">Tier</span>
-              <input
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-                value={tier}
-                onChange={(e) => setTier(e.target.value)}
-                placeholder="Comma-separated (e.g., Everyday, High Risk)"
-              />
-            </label>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -426,16 +344,6 @@ export default function GarmentEditPage() {
 
             <div className="rounded-xl border border-border bg-card p-4">
               <MultiSelectChips
-                label="Enclosures"
-                categoryKey="enclosures"
-                options={ENCLOSURES}
-                value={enclosures}
-                onChange={(next) => setEnclosures(next as any)}
-              />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <MultiSelectChips
                 label="Patterns"
                 categoryKey="patterns"
                 options={PATTERNS}
@@ -466,105 +374,12 @@ export default function GarmentEditPage() {
 
             <div className="rounded-xl border border-border bg-card p-4">
               <MultiSelectChips
-                label="Texture"
-                categoryKey="texture"
-                options={TEXTURES}
-                value={texture}
-                onChange={(next) => setTexture(next as any)}
-              />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <MultiSelectChips
-                label="Laundry details"
-                categoryKey="laundryDetails"
-                options={LAUNDRY_DETAILS}
-                value={laundryDetails}
-                onChange={(next) => setLaundryDetails(next as any)}
-              />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <MultiSelectChips
-                label="Fit/Size"
-                categoryKey="fit"
-                options={SIZES}
-                value={sizes}
-                onChange={(next) => setSizes(next as any)}
-              />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <MultiSelectChips
-                label="Era"
-                categoryKey="era"
-                options={ERAS}
-                value={era}
-                onChange={(next) => setEra(next as any)}
-              />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <MultiSelectChips
                 label="Vibes"
                 categoryKey="vibes"
                 options={VIBES}
                 value={vibes}
                 onChange={(next) => setVibes(next as any)}
               />
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="text-2xl font-bold">
-                <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
-                  Color tones
-                </span>
-              </h3>
-              <div className="mt-1 text-sm text-muted-foreground">
-                {Array.isArray(colorTones) && colorTones.length ? colorTones.join(", ") : "none"}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {COLOR_TONES.map((opt) => {
-                  const active = Array.isArray(colorTones) && colorTones.includes(opt as any);
-                  const file = (COLOR_TONE_IMAGE_MAP as any)[opt] as string;
-                  const src = `/ColorTones/${encodeURIComponent(file)}`;
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        const prev = Array.isArray(colorTones) ? (colorTones as any[]) : [];
-                        const next = active ? prev.filter((x) => x !== opt) : [...prev, opt];
-                        setColorTones(next as any);
-                      }}
-                      data-active={active ? "true" : "false"}
-                      className={
-                        active
-                          ? `vibe-toggle ${bubbleEffectsForSeed(`edit:colorTones:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
-                          : `vibe-toggle ${bubbleEffectsForSeed(`edit:colorTones:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
-                      }
-                    >
-                      <span className="relative grid h-full w-full place-items-center">
-                        <img
-                          src={src}
-                          alt={String(opt)}
-                          loading="lazy"
-                          className="vibe-toggle-image"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                        <span
-                          className="pointer-events-none absolute px-2 text-center text-[0.75rem] font-semibold leading-tight"
-                          style={{ opacity: active ? 0.08 : 0.12 }}
-                        >
-                          {opt}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </div>
 

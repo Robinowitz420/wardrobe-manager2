@@ -112,8 +112,6 @@ export default function GarmentsIndexPage() {
                       <span>{completion}</span>
                       <span>•</span>
                       <span>Borrow: {typeof g.glitcoinBorrow === "number" ? `Ġ${g.glitcoinBorrow}` : "—"}</span>
-                      <span>•</span>
-                      <span>Tier: {Array.isArray(g.tier) && g.tier.length ? g.tier.join(", ") : "—"}</span>
                     </div>
                   </div>
                 </div>

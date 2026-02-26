@@ -1,4 +1,3 @@
-import { GARMENT_LAYERS, GARMENT_POSITIONS } from "@/constants/garment";
 import { authFetch } from "@/lib/firebase/auth-fetch";
 import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
@@ -62,44 +61,6 @@ function normalizeLegacyGarment(raw: any): Garment {
 
   if (next?.state === "Late") next.state = "Checked Out";
   if (next?.state === "In Care / Repair") next.state = "In Care";
-
-  if (next?.tier === "High-Risk") next.tier = "High Risk";
-
-  if (typeof next?.layer === "string" && next.layer.trim()) {
-    const v = next.layer.trim();
-    next.layer = (GARMENT_LAYERS as readonly string[]).includes(v) ? v : undefined;
-  } else {
-    next.layer = undefined;
-  }
-
-  if (typeof next?.position === "string" && next.position.trim()) {
-    const v = next.position.trim();
-    next.position = (GARMENT_POSITIONS as readonly string[]).includes(v) ? [v] : [];
-  } else if (Array.isArray(next?.position)) {
-    next.position = next.position
-      .map((x: any) => (typeof x === "string" ? x.trim() : ""))
-      .filter((x: string) => (GARMENT_POSITIONS as readonly string[]).includes(x));
-  } else {
-    next.position = [];
-  }
-
-  if (typeof next?.tier === "string" && next.tier.trim()) {
-    next.tier = [next.tier.trim()];
-  } else if (!Array.isArray(next?.tier)) {
-    next.tier = [];
-  }
-
-  if (typeof next?.fit === "string" && next.fit.trim()) {
-    next.fit = [next.fit.trim()];
-  } else if (!Array.isArray(next?.fit)) {
-    next.fit = [];
-  }
-
-  if (typeof next?.era === "string" && next.era.trim()) {
-    next.era = [next.era.trim()];
-  } else if (!Array.isArray(next?.era)) {
-    next.era = [];
-  }
 
   if (typeof next?.reviews === "string" && next.reviews.trim()) {
     next.reviews = [

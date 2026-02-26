@@ -186,9 +186,6 @@ export default function GarmentDetailPage() {
               <div><span className="text-muted-foreground">Brand:</span> {garment.brand ? garment.brand : "—"}</div>
               <div><span className="text-muted-foreground">SKU:</span> {garment.sku ? garment.sku : "—"}</div>
               <div><span className="text-muted-foreground">State:</span> {garment.state}</div>
-              <div><span className="text-muted-foreground">Layer:</span> {(garment as any).layer ? String((garment as any).layer) : "—"}</div>
-              <div><span className="text-muted-foreground">Top/Bottom:</span> {Array.isArray((garment as any).position) && (garment as any).position.length ? (garment as any).position.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Tier:</span> {Array.isArray(garment.tier) && garment.tier.length ? garment.tier.join(", ") : "—"}</div>
             </div>
           </section>
 
@@ -196,25 +193,18 @@ export default function GarmentDetailPage() {
             <div className="text-sm font-semibold">Aesthetic</div>
             <div className="mt-3 grid gap-2 text-sm">
               <div><span className="text-muted-foreground">Colors:</span> {Array.isArray(garment.colors) && garment.colors.length ? garment.colors.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Color tones:</span> {Array.isArray((garment as any).colorTones) && (garment as any).colorTones.length ? (garment as any).colorTones.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Pockets:</span> {Array.isArray((garment as any).pockets) && (garment as any).pockets.length ? (garment as any).pockets.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Enclosures:</span> {Array.isArray((garment as any).enclosures) && (garment as any).enclosures.length ? (garment as any).enclosures.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Patterns:</span> {Array.isArray((garment as any).patterns) && (garment as any).patterns.length ? (garment as any).patterns.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Special features:</span> {Array.isArray((garment as any).specialFeatures) && (garment as any).specialFeatures.length ? (garment as any).specialFeatures.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Fabric types:</span> {Array.isArray((garment as any).fabricTypes) && (garment as any).fabricTypes.length ? (garment as any).fabricTypes.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Texture:</span> {Array.isArray((garment as any).texture) && (garment as any).texture.length ? (garment as any).texture.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Laundry details:</span> {Array.isArray((garment as any).laundryDetails) && (garment as any).laundryDetails.length ? (garment as any).laundryDetails.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Era:</span> {Array.isArray(garment.era) && garment.era.length ? garment.era.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Vibes:</span> {Array.isArray((garment as any).vibes) && (garment as any).vibes.length ? (garment as any).vibes.join(", ") : "—"}</div>
             </div>
           </section>
 
           <section className="mt-6 rounded-2xl border border-border bg-card p-5">
-            <div className="text-sm font-semibold">Size & fit</div>
+            <div className="text-sm font-semibold">Size</div>
             <div className="mt-3 grid gap-2 text-sm">
               <div><span className="text-muted-foreground">Size:</span> {garment.size ? garment.size : "—"}</div>
-              <div><span className="text-muted-foreground">Fit:</span> {Array.isArray(garment.fit) && garment.fit.length ? garment.fit.join(", ") : "—"}</div>
-              <div><span className="text-muted-foreground">Notes:</span> {garment.specialFitNotes ? garment.specialFitNotes : "—"}</div>
             </div>
           </section>
 
