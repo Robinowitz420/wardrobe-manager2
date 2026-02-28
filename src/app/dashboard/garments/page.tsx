@@ -45,18 +45,6 @@ export default function GarmentsIndexPage() {
       </div>
 
       <div className="mt-4 flex gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Clear all garments? This cannot be undone.")) {
-              // TODO: Implement clear all functionality
-              console.log("Clear all garments");
-            }
-          }}
-          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          Clear All
-        </button>
         <Link
           href="/dashboard"
           className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
@@ -128,9 +116,10 @@ export default function GarmentsIndexPage() {
                                 .finally(() => setDeletingId(null));
                             }}
                             disabled={deletingId === g.id}
-                            className="rounded-xl bg-destructive px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm transition hover:opacity-90 disabled:opacity-60"
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition disabled:opacity-60"
+                            title="Delete"
                           >
-                            {deletingId === g.id ? "Deleting…" : "Delete"}
+                            {deletingId === g.id ? "…" : "✕"}
                           </button>
                         </div>
                       </div>
