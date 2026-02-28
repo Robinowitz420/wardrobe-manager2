@@ -31,10 +31,7 @@ export default function GarmentsIndexPage() {
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Before And Afters' Closet!</h1>
-          <p className="text-sm text-muted-foreground">
-            Inventory records. Clear state, manual edits, no dead pages.
-          </p>
+          <img src="/herobannere.jpg" alt="Before And Afters' Closet" className="w-full max-w-md rounded-xl" />
         </div>
         <Link
           href="/dashboard/garments/new"
