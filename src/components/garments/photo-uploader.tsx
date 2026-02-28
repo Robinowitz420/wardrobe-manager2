@@ -75,7 +75,7 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
 export function PhotoUploader({ value, onChange }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const MAX_PHOTOS = 5;
+  const MAX_PHOTOS = 1;
 
   function emitUploadError(err: unknown) {
     if (typeof window === "undefined") return;
@@ -146,7 +146,7 @@ export function PhotoUploader({ value, onChange }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <div className="text-base font-medium">Photos</div>
-          <div className="text-base text-muted-foreground">Up to 5 photos per garment. HEIC/HEIF will be converted to JPEG.</div>
+          <div className="text-base text-muted-foreground">1 photo per garment. HEIC/HEIF will be converted to JPEG.</div>
         </div>
         <div className="flex gap-2">
           <button
@@ -154,7 +154,7 @@ export function PhotoUploader({ value, onChange }: Props) {
             onClick={() => inputRef.current?.click()}
             className="rounded-xl border border-border bg-background px-3 py-2 text-base font-medium hover:bg-muted"
           >
-            Add photos
+            Add photo
           </button>
         </div>
       </div>
@@ -214,16 +214,8 @@ export function PhotoUploader({ value, onChange }: Props) {
               </div>
             ))}
           </div>
-
-          <div className="text-xs text-muted-foreground">
-            {value.length}/{MAX_PHOTOS} photos
-          </div>
         </div>
       )}
-
-      <div className="text-base text-muted-foreground">
-        Note: photos are stored locally on your computer for V1.
-      </div>
     </div>
   );
 }

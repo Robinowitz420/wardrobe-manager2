@@ -78,7 +78,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ files: saved });
   } catch (e: any) {
-    const message = typeof e?.message === "string" ? e.message : "Upload failed";
+    const rawMessage = typeof e?.message === "string" ? e.message : "Upload failed";
+    const message =
+      rawMessage === "The specified bucket does not exist."
+        ? "Upload failed: Firebase Storage bucket is missing or misconfigured. Enable Storage in Firebase Console and set FIREBASE_STORAGE_BUCKET to your bucket name (typically <project-id>.appspot.com)."
+        : rawMessage;
     const code = typeof e?.code === "string" ? e.code : typeof e?.code === "number" ? String(e.code) : undefined;
     let bucketName: string | undefined;
     try {

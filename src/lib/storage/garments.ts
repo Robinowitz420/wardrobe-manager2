@@ -30,7 +30,7 @@ function normalizePhotosForStorage(photos: any): Garment["photos"] {
   const filtered = safe
     .map((p: any) => ({ ...p, dataUrl: undefined }))
     .filter((p: any) => typeof p?.src === "string" && p.src.trim())
-    .slice(0, 5);
+    .slice(0, 1);
 
   if (filtered.length > 0 && !filtered.some((p: any) => p?.isPrimary)) {
     filtered[0] = { ...filtered[0], isPrimary: true };
