@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+ html,
+ body {
+   min-height: 100%;
+ }
+
+ body {
+   background-image: url("/plain%20wallpaper.png");
+   background-size: cover;
+   background-position: center;
+   background-attachment: fixed;
+ }
+
 :root {
   /* Base colors */
   --background: 210 55% 97%;
