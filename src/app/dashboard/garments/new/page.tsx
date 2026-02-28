@@ -22,6 +22,7 @@ import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
 import type { GarmentCreateInput } from "@/lib/validations/garment";
 import { garmentCreateInputSchema } from "@/lib/validations/garment";
 import { createGarment, fetchGarmentById, generateSku, updateGarment } from "@/lib/storage/garments";
+import type { GarmentPhoto } from "@/lib/validations/garment";
 
 function nowIso() {
   return new Date().toISOString();
@@ -65,6 +66,11 @@ function newId(prefix: string) {
     return `${prefix}_${crypto.randomUUID()}`;
   }
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+}
+
+function newPhotoId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `p_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
 }
 
 async function fileToDataUrl(file: File) {
@@ -154,6 +160,9 @@ export default function NewGarmentPage() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  const bulkInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [bulkIntaking, setBulkIntaking] = React.useState(false);
+
   const [form, setForm] = React.useState<GarmentCreateInput>(() => blankGarmentForm());
 
   React.useEffect(() => {
@@ -200,6 +209,55 @@ export default function NewGarmentPage() {
     value: GarmentCreateInput[K],
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function onBulkIntake(files: FileList | null) {
+    if (!files) return;
+    setError(null);
+    setBulkIntaking(true);
+    try {
+      const picked = Array.from(files);
+      if (picked.length === 0) return;
+
+      const normalized = await Promise.all(picked.map((f) => normalizeImageFile(f)));
+      const uploaded = await uploadFilesToDisk(normalized);
+      if (uploaded.length !== normalized.length) throw new Error("Upload failed");
+
+      const createdIds: string[] = [];
+      for (let i = 0; i < uploaded.length; i++) {
+        const u = uploaded[i];
+        if (!u?.src || !u?.fileName) continue;
+
+        const photos: GarmentPhoto[] = [
+          {
+            id: newPhotoId(),
+            src: u.src,
+            fileName: u.fileName,
+            isPrimary: true,
+          },
+        ];
+
+        const draft: GarmentCreateInput = {
+          ...blankGarmentForm(),
+          completionStatus: "DRAFT",
+          name: "Untitled garment",
+          photos,
+          intakeSessionId: undefined,
+          intakeOrder: undefined,
+        } as any;
+
+        const saved = await createGarment(draft);
+        createdIds.push(saved.id);
+      }
+
+      router.push("/dashboard/garments");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Bulk intake failed";
+      setError(msg);
+    } finally {
+      setBulkIntaking(false);
+      if (bulkInputRef.current) bulkInputRef.current.value = "";
+    }
   }
 
   async function onSave() {
@@ -270,6 +328,34 @@ export default function NewGarmentPage() {
         ) : null}
 
         <div className="mt-6 grid gap-6">
+          <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-base font-medium">Bulk photo intake</div>
+                <div className="text-base text-muted-foreground">Upload multiple garment photos. We’ll create one new draft listing per photo.</div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => bulkInputRef.current?.click()}
+                  disabled={bulkIntaking || saving}
+                  className="rounded-xl border border-border bg-background px-3 py-2 text-base font-medium hover:bg-muted disabled:opacity-60"
+                >
+                  {bulkIntaking ? "Creating…" : "Bulk upload"}
+                </button>
+              </div>
+            </div>
+
+            <input
+              ref={bulkInputRef}
+              type="file"
+              accept="image/*,.heic,.heif"
+              multiple
+              className="hidden"
+              onChange={(e) => void onBulkIntake(e.target.files)}
+            />
+          </section>
+
           <PhotoUploader
             value={form.photos}
             onChange={(photos) => setField("photos", photos)}
