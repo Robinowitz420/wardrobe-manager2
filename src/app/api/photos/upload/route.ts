@@ -46,6 +46,11 @@ export async function POST(request: Request) {
 
     const { getStorage } = await import("firebase-admin/storage");
     const bucket = getStorage().bucket();
+    
+    // Debug: log the bucket name being used
+    console.log("[Upload] Using bucket:", bucket.name);
+    console.log("[Upload] FIREBASE_STORAGE_BUCKET env:", process.env.FIREBASE_STORAGE_BUCKET);
+    console.log("[Upload] NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET env:", process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
 
     for (const file of files) {
       const buf = Buffer.from(await file.arrayBuffer());
@@ -76,12 +81,12 @@ export async function POST(request: Request) {
       saved.push({ src, fileName: originalName });
     }
 
-    return NextResponse.json({ files: saved });
+    return NextResponse.json({ files: saved, debug: { bucket: bucket.name } });
   } catch (e: any) {
     const rawMessage = typeof e?.message === "string" ? e.message : "Upload failed";
     const message =
       rawMessage === "The specified bucket does not exist."
-        ? "Upload failed: Firebase Storage bucket is missing or misconfigured. Enable Storage in Firebase Console and set FIREBASE_STORAGE_BUCKET to your bucket name (typically <project-id>.appspot.com)."
+        ? `Upload failed: Firebase Storage bucket '${process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "not set"}' does not exist. Enable Storage in Firebase Console and redeploy.`
         : rawMessage;
     const code = typeof e?.code === "string" ? e.code : typeof e?.code === "number" ? String(e.code) : undefined;
     let bucketName: string | undefined;
