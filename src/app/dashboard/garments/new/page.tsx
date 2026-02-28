@@ -112,7 +112,7 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
   const form = new FormData();
   for (const f of files) form.append("files", f);
   const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as { files?: Array<{ src: string; fileName: string }>; error?: string; code?: string; bucket?: string } | null;
   if (!res.ok || !json || !Array.isArray(json.files)) {
     const base =
       typeof json?.error === "string" ? json.error : `Upload failed (${res.status || "unknown"})`;
@@ -123,17 +123,17 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
     throw new Error(`${base}${extra}`);
   }
   return json.files
-    .map((x: any) => ({ src: x?.src, fileName: x?.fileName }))
-    .filter((x: any) => typeof x?.src === "string" && typeof x?.fileName === "string");
+    .map((x) => ({ src: x?.src, fileName: x?.fileName }))
+    .filter((x) => typeof x?.src === "string" && typeof x?.fileName === "string");
 }
 
-async function renameUploadedPhotos(name: string, photos: any[]): Promise<any[]> {
+async function renameUploadedPhotos(name: string, photos: GarmentPhoto[]): Promise<GarmentPhoto[]> {
   const clean = name.trim();
   if (!clean || clean === "Untitled garment") return photos;
 
   const next = photos.slice();
   for (let i = 0; i < next.length; i++) {
-    const p = next[i] as any;
+    const p = next[i];
     if (!p?.src || typeof p.src !== "string" || !p.src.startsWith("/uploads/")) continue;
 
     try {
@@ -142,7 +142,7 @@ async function renameUploadedPhotos(name: string, photos: any[]): Promise<any[]>
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ src: p.src, name: clean, index: i }),
       });
-      const json = (await res.json().catch(() => null)) as any;
+      const json = (await res.json().catch(() => null)) as { src?: string } | null;
       if (res.ok && typeof json?.src === "string") {
         next[i] = { ...p, src: json.src, fileName: clean };
       }
@@ -185,9 +185,9 @@ export default function NewGarmentPage() {
       if (!found) return;
       setForm((prev) => ({
         ...prev,
-        ...(found as any),
+        ...found,
         photos: found.photos,
-        suggested: (found as any).suggested ?? prev.suggested,
+        suggested: found.suggested ?? prev.suggested,
       }));
     });
 
@@ -242,9 +242,7 @@ export default function NewGarmentPage() {
           completionStatus: "DRAFT",
           name: "Untitled garment",
           photos,
-          intakeSessionId: undefined,
-          intakeOrder: undefined,
-        } as any;
+        };
 
         const saved = await createGarment(draft);
         createdIds.push(saved.id);
@@ -266,7 +264,7 @@ export default function NewGarmentPage() {
     try {
       const draft: GarmentCreateInput = {
         ...form,
-        photos: (await renameUploadedPhotos(form.name.trim(), form.photos as any)) as any,
+        photos: await renameUploadedPhotos(form.name.trim(), form.photos),
         sku:
           typeof form.sku === "string" && form.sku.trim()
             ? form.sku.trim()
@@ -275,12 +273,12 @@ export default function NewGarmentPage() {
         name: form.name.trim() ? form.name.trim() : "Untitled garment",
       };
 
-      const completionStatus =
+      const completionStatus: "COMPLETE" | "DRAFT" =
         draft.photos.length > 0 && draft.name !== "Untitled garment" ? "COMPLETE" : "DRAFT";
-      (draft as any).completionStatus = completionStatus;
+      const draftWithStatus = { ...draft, completionStatus };
 
       if (completionStatus === "COMPLETE") {
-        const parsed = garmentCreateInputSchema.safeParse(draft);
+        const parsed = garmentCreateInputSchema.safeParse(draftWithStatus);
         if (!parsed.success) {
           setError(
             "Please fill required fields (at minimum: photos + garment name).",
@@ -290,12 +288,12 @@ export default function NewGarmentPage() {
       }
 
       if (editId) {
-        const updated = updateGarment(editId, draft as any);
+        const updated = updateGarment(editId, draftWithStatus);
         router.push(`/dashboard/garments/${updated?.id ?? editId}`);
         return;
       }
 
-      const saved = await createGarment(draft);
+      const saved = await createGarment(draftWithStatus);
       router.push(`/dashboard/garments/${saved.id}`);
     } finally {
       setSaving(false);
@@ -364,12 +362,12 @@ export default function NewGarmentPage() {
           <section
             className="rounded-2xl border border-border bg-background p-4 shadow-sm"
             style={{
-              ['--bubble-rim-color' as any]: "330 85% 66%",
-              ['--bubble-bg-1' as any]: "330 90% 96%",
-              ['--bubble-bg-2' as any]: "38 95% 96%",
-              ['--bubble-bg-1-active' as any]: "330 90% 88%",
-              ['--bubble-bg-2-active' as any]: "38 95% 86%",
-            }}
+              ['--bubble-rim-color' as string]: "330 85% 66%",
+              ['--bubble-bg-1' as string]: "330 90% 96%",
+              ['--bubble-bg-2' as string]: "38 95% 96%",
+              ['--bubble-bg-1-active' as string]: "330 90% 88%",
+              ['--bubble-bg-2-active' as string]: "38 95% 86%",
+            } as React.CSSProperties}
           >
             <h2 className="bubble-section-title font-bold">
               <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
@@ -382,7 +380,7 @@ export default function NewGarmentPage() {
                 <span className="bubble-mini-header">Garment name *</span>
                 <div
                   className={`bubble-field ${bubbleEffectsForSeed("new:name")}`}
-                  style={{ ['--bubble-size' as any]: `${Math.min(220, Math.max(92, 72 + String(form.name ?? "").length * 6))}px` }}
+                  style={{ ['--bubble-size' as string]: `${Math.min(220, Math.max(92, 72 + String(form.name ?? "").length * 6))}px` } as React.CSSProperties}
                 >
                   <input
                     className="bubble-input bubble-autosize"
@@ -397,7 +395,7 @@ export default function NewGarmentPage() {
                 <span className="bubble-mini-header">Brand</span>
                 <div
                   className={`bubble-field ${bubbleEffectsForSeed("new:brand")}`}
-                  style={{ ['--bubble-size' as any]: `${Math.min(200, Math.max(92, 72 + String(form.brand ?? "").length * 6))}px` }}
+                  style={{ ['--bubble-size' as string]: `${Math.min(200, Math.max(92, 72 + String(form.brand ?? "").length * 6))}px` } as React.CSSProperties}
                 >
                   <input
                     className="bubble-input bubble-autosize"
@@ -419,7 +417,7 @@ export default function NewGarmentPage() {
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setField("garmentType", (active ? undefined : opt) as any)}
+                        onClick={() => setField("garmentType", active ? undefined : opt)}
                         data-active={active ? "true" : "false"}
                         className={
                           active
@@ -455,20 +453,20 @@ export default function NewGarmentPage() {
                 <div className="flex gap-2">
                   <div
                     className={`bubble-field ${bubbleEffectsForSeed("new:sku")}`}
-                    style={{ ['--bubble-size' as any]: `${Math.min(280, Math.max(120, 92 + String(form.sku ?? "").length * 7))}px` }}
+                    style={{ ['--bubble-size' as string]: `${Math.min(280, Math.max(120, 92 + String(form.sku ?? "").length * 7))}px` } as React.CSSProperties}
                   >
                     <input
                       className="bubble-input bubble-autosize"
                       value={form.sku ?? ""}
-                      onChange={(e) => setField("sku", e.target.value as any)}
+                      onChange={(e) => setField("sku", e.target.value)}
                       placeholder="Auto-generated if blank"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={() => setField("sku", generateSku() as any)}
+                    onClick={() => setField("sku", generateSku())}
                     className={`bubble-button ${bubbleEffectsForSeed("new:sku-generate")}`}
-                    style={{ ['--bubble-size' as any]: "112px" }}
+                    style={{ ['--bubble-size' as string]: "112px" } as React.CSSProperties}
                   >
                     Generate
                   </button>
@@ -484,9 +482,9 @@ export default function NewGarmentPage() {
                       <button
                         key={s}
                         type="button"
-                        onClick={() => setField("state", s as any)}
+                        onClick={() => setField("state", s)}
                         data-active={active ? "true" : "false"}
-                        style={{ ['--bubble-size' as any]: `${Math.min(120, Math.max(84, 58 + String(s).length * 6))}px` }}
+                        style={{ ['--bubble-size' as string]: `${Math.min(120, Math.max(84, 58 + String(s).length * 6))}px` } as React.CSSProperties}
                         className={
                           active
                             ? `bubble-toggle bubble-chip ${bubbleEffectsForSeed(`new:state:${String(s)}`)} bg-primary text-primary-foreground shadow-sm`
@@ -501,42 +499,14 @@ export default function NewGarmentPage() {
               </label>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="grid gap-1">
-                <span className="bubble-mini-header">Size</span>
-                <div
-                  className={`bubble-field ${bubbleEffectsForSeed("new:size")}`}
-                  style={{ ['--bubble-size' as any]: `${Math.min(200, Math.max(92, 72 + String(form.size ?? "").length * 6))}px` }}
-                >
-                  <input
-                    className="bubble-input bubble-autosize"
-                    value={form.size ?? ""}
-                    onChange={(e) => setField("size", e.target.value)}
-                    placeholder="e.g., S / 8 / 27"
-                  />
-                </div>
-              </label>
-            </div>
-
             <div className="mt-5 grid gap-5">
-              <div className="rounded-xl border border-border bg-card p-4">
-                <MultiSelectChips
-                  label="Colors"
-                  categoryKey="colors"
-                  options={COLORS}
-                  value={form.colors}
-                  onChange={(next) => setField("colors", next as any)}
-                />
-                <div className="mt-1 text-sm text-muted-foreground">Visually dominant colors.</div>
-              </div>
-
               <div className="rounded-xl border border-border bg-card p-4">
                 <MultiSelectChips
                   label="Pockets"
                   categoryKey="pockets"
                   options={POCKETS}
-                  value={(form as any).pockets ?? ([] as any)}
-                  onChange={(next) => setField("pockets" as any, next as any)}
+                  value={form.pockets ?? []}
+                  onChange={(next) => setField("pockets", next)}
                 />
               </div>
 
@@ -545,8 +515,8 @@ export default function NewGarmentPage() {
                   label="Patterns"
                   categoryKey="patterns"
                   options={PATTERNS}
-                  value={(form as any).patterns ?? ([] as any)}
-                  onChange={(next) => setField("patterns" as any, next as any)}
+                  value={form.patterns ?? []}
+                  onChange={(next) => setField("patterns", next)}
                 />
               </div>
 
@@ -555,8 +525,8 @@ export default function NewGarmentPage() {
                   label="Special features"
                   categoryKey="specialFeatures"
                   options={SPECIAL_FEATURES}
-                  value={(form as any).specialFeatures ?? ([] as any)}
-                  onChange={(next) => setField("specialFeatures" as any, next as any)}
+                  value={form.specialFeatures ?? []}
+                  onChange={(next) => setField("specialFeatures", next)}
                 />
               </div>
 
@@ -565,25 +535,25 @@ export default function NewGarmentPage() {
                   label="Fabric types"
                   categoryKey="fabricTypes"
                   options={FABRIC_TYPES}
-                  value={(form as any).fabricTypes ?? ([] as any)}
-                  onChange={(next) => setField("fabricTypes" as any, next as any)}
+                  value={form.fabricTypes ?? []}
+                  onChange={(next) => setField("fabricTypes", next)}
                 />
               </div>
 
               <div
                 className="rounded-xl border border-border bg-card p-4"
                 style={{
-                  ['--bubble-rim-color' as any]: "142 70% 40%",
-                  ['--bubble-bg-1' as any]: "142 85% 94%",
-                  ['--bubble-bg-2' as any]: "166 90% 92%",
-                }}
+                  ['--bubble-rim-color' as string]: "142 70% 40%",
+                  ['--bubble-bg-1' as string]: "142 85% 94%",
+                  ['--bubble-bg-2' as string]: "166 90% 92%",
+                } as React.CSSProperties}
               >
                 <MultiSelectChips
                   label="Vibes"
                   categoryKey="vibes"
                   options={VIBES}
-                  value={(form as any).vibes ?? ([] as any)}
-                  onChange={(next) => setField("vibes" as any, next as any)}
+                  value={form.vibes ?? []}
+                  onChange={(next) => setField("vibes", next)}
                 />
               </div>
             </div>
@@ -592,10 +562,10 @@ export default function NewGarmentPage() {
           <section
             className="rounded-2xl border border-border bg-background p-4 shadow-sm"
             style={{
-              ['--bubble-rim-color' as any]: "196 80% 55%",
-              ['--bubble-bg-1' as any]: "196 95% 96%",
-              ['--bubble-bg-2' as any]: "142 90% 96%",
-            }}
+              ['--bubble-rim-color' as string]: "196 80% 55%",
+              ['--bubble-bg-1' as string]: "196 95% 96%",
+              ['--bubble-bg-2' as string]: "142 90% 96%",
+            } as React.CSSProperties}
           >
             <h2 className="bubble-section-title font-bold">
               <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
@@ -641,10 +611,10 @@ export default function NewGarmentPage() {
           <section
             className="rounded-2xl border border-border bg-background p-4 shadow-sm"
             style={{
-              ['--bubble-rim-color' as any]: "268 70% 62%",
-              ['--bubble-bg-1' as any]: "268 90% 96%",
-              ['--bubble-bg-2' as any]: "330 90% 96%",
-            }}
+              ['--bubble-rim-color' as string]: "268 70% 62%",
+              ['--bubble-bg-1' as string]: "268 90% 96%",
+              ['--bubble-bg-2' as string]: "330 90% 96%",
+            } as React.CSSProperties}
           >
             <h2 className="bubble-section-title font-bold">
               <span className="inline-flex items-center rounded-full border border-border bg-muted px-5 py-2">
@@ -656,7 +626,7 @@ export default function NewGarmentPage() {
                 <span className="bubble-mini-header">Stories</span>
                 <div
                   className="bubble-field"
-                  style={{ ['--bubble-size' as any]: `${Math.min(320, Math.max(160, 120 + String(form.stories ?? "").length * 0.9))}px` }}
+                  style={{ ['--bubble-size' as string]: `${Math.min(320, Math.max(160, 120 + String(form.stories ?? "").length * 0.9))}px` } as React.CSSProperties}
                 >
                   <textarea
                     className="bubble-textarea"
@@ -670,7 +640,7 @@ export default function NewGarmentPage() {
                 <span className="bubble-mini-header">Internal notes</span>
                 <div
                   className="bubble-field"
-                  style={{ ['--bubble-size' as any]: `${Math.min(320, Math.max(160, 120 + String(form.internalNotes ?? "").length * 0.9))}px` }}
+                  style={{ ['--bubble-size' as string]: `${Math.min(320, Math.max(160, 120 + String(form.internalNotes ?? "").length * 0.9))}px` } as React.CSSProperties}
                 >
                   <textarea
                     className="bubble-textarea"
