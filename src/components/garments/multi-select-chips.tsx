@@ -214,31 +214,6 @@ export function MultiSelectChips<T extends string>({
       ) : null}
       <div className="text-sm text-muted-foreground">{safeValue.length ? safeValue.join(", ") : "none"}</div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => toggle(NOT_APPLICABLE)}
-          data-active={safeValue.includes(NOT_APPLICABLE) ? "true" : "false"}
-          style={bubbleSizeForLabel("Not Applicable")}
-          className={
-            safeValue.includes(NOT_APPLICABLE)
-              ? `bubble-toggle bubble-chip${rainbow} ${bubbleEffectsForSeed(`${categoryKey}:not-applicable`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
-              : `bubble-toggle bubble-chip${rainbow} ${bubbleEffectsForSeed(`${categoryKey}:not-applicable`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
-          }
-        >
-          Not Applicable
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setAddingOther((v) => !v)}
-          style={bubbleSizeForLabel("Other")}
-          className={`bubble-toggle bubble-chip${rainbow} ${bubbleEffectsForSeed(`${categoryKey}:other`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`}
-        >
-          Other…
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
         {mergedOptions.map((opt) => {
           const active = safeValue.includes(opt);
           const fill = categoryKey === "colors" && active ? colorFillVarsForOption(String(opt)) : null;
@@ -300,35 +275,6 @@ export function MultiSelectChips<T extends string>({
           );
         })}
       </div>
-
-      {addingOther ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={otherText}
-            onChange={(e) => setOtherText(e.target.value)}
-            placeholder="Type a new option"
-            className="h-10 w-72 rounded-xl border border-border bg-background px-3 text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => void saveOther()}
-            disabled={savingOther}
-            className="rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm disabled:opacity-60"
-          >
-            {savingOther ? "Saving…" : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAddingOther(false);
-              setOtherText("");
-            }}
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-semibold shadow-sm hover:bg-muted"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

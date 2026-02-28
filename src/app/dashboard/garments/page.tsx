@@ -44,6 +44,33 @@ export default function GarmentsIndexPage() {
         </Link>
       </div>
 
+      <div className="mt-4 flex gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm("Clear all garments? This cannot be undone.")) {
+              // TODO: Implement clear all functionality
+              console.log("Clear all garments");
+            }
+          }}
+          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          Clear All
+        </button>
+        <Link
+          href="/dashboard"
+          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          ← Back to Profile
+        </Link>
+        <Link
+          href="/dashboard/calendar"
+          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          📅 Schedule
+        </Link>
+      </div>
+
       {items.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">

@@ -25,6 +25,12 @@ export default function DashboardPage() {
           >
             View garments (inventory)
           </Link>
+          <Link
+            href="/dashboard/calendar"
+            className="rounded-xl bg-black px-4 py-3 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            📅 Employee Schedule
+          </Link>
         </div>
       </div>
     </div>

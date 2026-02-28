@@ -278,7 +278,6 @@ export const VIBES = [
   "Baddie",
   "Clean Girl",
   "Cottage Core",
-  "Dark Academia",
 ] as const;
 
 export const VIBE_GROUPS = [
