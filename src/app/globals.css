@@ -1,16 +1,33 @@
 @import "tailwindcss";
 
- html,
- body {
-   min-height: 100%;
- }
+html,
+body {
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
 
- body {
-   background-image: url("/wallpaper.png");
-   background-size: cover;
-   background-position: center;
-   background-attachment: fixed;
- }
+body {
+  background-image: url("/wallpaper.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* Make page containers fully transparent so wallpaper shows through */
+.bg-card {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.bg-background {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.bg-muted {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
 
 :root {
   /* Base colors */
