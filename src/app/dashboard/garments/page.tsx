@@ -30,9 +30,7 @@ export default function GarmentsIndexPage() {
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="flex items-end justify-between gap-4">
-        <div>
-          <img src="/herobannere.jpg" alt="Before And Afters' Closet" className="w-full max-w-md rounded-xl" />
-        </div>
+        <div />
         <Link
           href="/dashboard/garments/new"
           className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"

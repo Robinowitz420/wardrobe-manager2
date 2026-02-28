@@ -64,8 +64,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
+  const isNewGarmentPage = pathname === "/dashboard/garments/new";
+
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+      {!isNewGarmentPage && (
+        <div className="mb-4">
+          <img src="/herobannere.jpg" alt="Before And Afters' Closet" className="w-full rounded-xl" />
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-end">
         <button
           type="button"
