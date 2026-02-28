@@ -9,11 +9,11 @@ body {
 }
 
 body {
-  background-image: url("/wallpaper.png");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+  background-image: url("/wallpaper.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
 }
 
 /* Make page containers fully transparent so wallpaper shows through */
