@@ -39,7 +39,13 @@ export async function GET(request: Request) {
   }
 
   const db = getAdminFirestore();
+  
+  // Debug: log which project we're querying
+  console.log("[Garments GET] Querying Firestore project:", process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).project_id : 'unknown');
+  
   const snap = await db.collection("garments").orderBy("updatedAt", "desc").get();
+  
+  console.log("[Garments GET] Found", snap.docs.length, "garments");
 
   const garments = snap.docs.map((d) => {
     const r = d.data() as any;
@@ -56,7 +62,7 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ garments });
+  return NextResponse.json({ garments, debug: { count: snap.docs.length, project: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).project_id : 'unknown' }});
 }
 
 export async function POST(request: Request) {
