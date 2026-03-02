@@ -125,6 +125,7 @@ export default function PublicSchedulePage() {
 
   const handleAddTimeslot = async () => {
     if (!selectedDate || !employeeName.trim()) return;
+    console.log("[Schedule UI] Add timeslot clicked");
     const dateKey = getDateKey(selectedDate);
     const newSlot: TimeSlot = {
       id: Date.now().toString(),
@@ -142,6 +143,7 @@ export default function PublicSchedulePage() {
 
   const handleUpdateTimeslot = async () => {
     if (!selectedDate || !editingSlot || !employeeName.trim()) return;
+    console.log("[Schedule UI] Update timeslot clicked", editingSlot.id);
     const dateKey = getDateKey(selectedDate);
     const newSchedules = {
       ...schedules,
@@ -156,6 +158,7 @@ export default function PublicSchedulePage() {
 
   const handleDeleteTimeslot = async (slotId: string) => {
     if (!selectedDate || !isLoggedIn) return;
+    console.log("[Schedule UI] Delete timeslot clicked", slotId);
     const dateKey = getDateKey(selectedDate);
     const newSchedules = { ...schedules, [dateKey]: schedules[dateKey]?.filter(slot => slot.id !== slotId) || [] };
     setSchedules(newSchedules);
@@ -499,6 +502,7 @@ export default function PublicSchedulePage() {
                       {isEditing ? (
                         <>
                           <button
+                            type="button"
                             onClick={handleUpdateTimeslot}
                             disabled={!employeeName.trim()}
                             className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
@@ -506,6 +510,7 @@ export default function PublicSchedulePage() {
                             Update Timeslot
                           </button>
                           <button
+                            type="button"
                             onClick={resetForm}
                             className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
                           >
@@ -514,6 +519,7 @@ export default function PublicSchedulePage() {
                         </>
                       ) : (
                         <button
+                          type="button"
                           onClick={handleAddTimeslot}
                           disabled={!employeeName.trim()}
                           className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
