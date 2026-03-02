@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { authFetch } from "@/lib/firebase/auth-fetch";
 
 interface TimeSlot {
   id: string;
@@ -19,6 +20,8 @@ interface DaySchedule {
 
 export default function PublicSchedulePage() {
   const [user, setUser] = React.useState<User | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [viewMode, setViewMode] = React.useState<"month" | "week" | "day">("month");
@@ -39,6 +42,24 @@ export default function PublicSchedulePage() {
       setUser(u);
     });
     return () => unsub();
+  }, []);
+
+  // Fetch schedule on mount
+  React.useEffect(() => {
+    async function fetchSchedule() {
+      try {
+        const res = await fetch("/api/schedule");
+        const data = await res.json();
+        if (data.schedules) {
+          setSchedules(data.schedules);
+        }
+      } catch (e) {
+        console.error("Failed to fetch schedule:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSchedule();
   }, []);
 
   const isLoggedIn = Boolean(user);
@@ -76,12 +97,10 @@ export default function PublicSchedulePage() {
 
     const days = [];
     
-    // Add empty cells for days before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
     
-    // Add all days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(year, month, i));
     }
@@ -102,7 +121,7 @@ export default function PublicSchedulePage() {
     setSelectedDate(new Date());
   };
 
-  const handleAddTimeslot = () => {
+  const handleAddTimeslot = async () => {
     if (!selectedDate || !employeeName.trim()) return;
     const dateKey = getDateKey(selectedDate);
     const newSlot: TimeSlot = {
@@ -112,9 +131,50 @@ export default function PublicSchedulePage() {
       employee: employeeName.trim(),
       color: selectedColor,
     };
-    setSchedules(prev => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), newSlot] }));
+    const newSchedules = { ...schedules, [dateKey]: [...(schedules[dateKey] || []), newSlot] };
+    setSchedules(newSchedules);
     resetForm();
+    await saveSchedule(newSchedules);
   };
+
+  const handleUpdateTimeslot = async () => {
+    if (!selectedDate || !editingSlot || !employeeName.trim()) return;
+    const dateKey = getDateKey(selectedDate);
+    const newSchedules = {
+      ...schedules,
+      [dateKey]: schedules[dateKey]?.map(slot => slot.id === editingSlot.id 
+        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: selectedColor }
+        : slot) || [],
+    };
+    setSchedules(newSchedules);
+    resetForm();
+    await saveSchedule(newSchedules);
+  };
+
+  const handleDeleteTimeslot = async (slotId: string) => {
+    if (!selectedDate || !isLoggedIn) return;
+    const dateKey = getDateKey(selectedDate);
+    const newSchedules = { ...schedules, [dateKey]: schedules[dateKey]?.filter(slot => slot.id !== slotId) || [] };
+    setSchedules(newSchedules);
+    await saveSchedule(newSchedules);
+  };
+
+  async function saveSchedule(newSchedules: DaySchedule) {
+    if (!isLoggedIn) return;
+    setSaving(true);
+    try {
+      await authFetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schedules: newSchedules }),
+      });
+    } catch (e) {
+      console.error("Failed to save schedule:", e);
+      alert("Failed to save schedule changes");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const handleEditTimeslot = (slot: TimeSlot) => {
     if (!isLoggedIn) return;
@@ -124,24 +184,6 @@ export default function PublicSchedulePage() {
     setEmployeeName(slot.employee);
     setSelectedColor(slot.color);
     setIsEditing(true);
-  };
-
-  const handleUpdateTimeslot = () => {
-    if (!selectedDate || !editingSlot || !employeeName.trim()) return;
-    const dateKey = getDateKey(selectedDate);
-    setSchedules(prev => ({
-      ...prev,
-      [dateKey]: prev[dateKey]?.map(slot => slot.id === editingSlot.id 
-        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: selectedColor }
-        : slot) || [],
-    }));
-    resetForm();
-  };
-
-  const handleDeleteTimeslot = (slotId: string) => {
-    if (!selectedDate || !isLoggedIn) return;
-    const dateKey = getDateKey(selectedDate);
-    setSchedules(prev => ({ ...prev, [dateKey]: prev[dateKey]?.filter(slot => slot.id !== slotId) || [] }));
   };
 
   const resetForm = () => {
@@ -162,6 +204,9 @@ export default function PublicSchedulePage() {
 
       {/* Auth Status */}
       <div className="mb-4 flex items-center justify-end gap-3">
+        {saving && (
+          <span className="text-sm text-muted-foreground">Saving...</span>
+        )}
         {isLoggedIn ? (
           <>
             <span className="text-sm text-muted-foreground">Logged in as {user?.email}</span>
@@ -182,263 +227,271 @@ export default function PublicSchedulePage() {
         )}
       </div>
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Employee Schedule</h1>
-            <p className="text-sm text-muted-foreground">
-              View employee timeslots and availability
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode("month")}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                viewMode === "month" 
-                  ? "bg-black text-white" 
-                  : "bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setViewMode("week")}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                viewMode === "week" 
-                  ? "bg-black text-white" 
-                  : "bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setViewMode("day")}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                viewMode === "day" 
-                  ? "bg-black text-white" 
-                  : "bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              Day
-            </button>
-          </div>
+      {loading ? (
+        <div className="rounded-2xl border border-border bg-card p-8 text-center">
+          <div className="text-muted-foreground">Loading schedule...</div>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        {/* Calendar Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigateMonth(-1)}
-              className="rounded-lg p-2 hover:bg-muted transition"
-            >
-              ←
-            </button>
-            <h2 className="text-lg font-semibold">{monthYear}</h2>
-            <button
-              onClick={() => navigateMonth(1)}
-              className="rounded-lg p-2 hover:bg-muted transition"
-            >
-              →
-            </button>
-          </div>
-          <button
-            onClick={goToToday}
-            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
-          >
-            Today
-          </button>
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {/* Week day headers */}
-          {weekDays.map(day => (
-            <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
-              {day}
-            </div>
-          ))}
-          
-          {/* Calendar days */}
-          {days.map((day, index) => {
-            const daySlots = day ? getDaySlots(day) : [];
-            return (
-              <div
-                key={index}
-                className={`min-h-[80px] p-2 border border-border rounded-lg transition ${
-                  day ? 'hover:bg-muted cursor-pointer' : ''
-                } ${
-                  selectedDate && day && 
-                  selectedDate.toDateString() === day.toDateString() 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-background'
-                }`}
-                onClick={() => day && setSelectedDate(day)}
-              >
-                {day && (
-                  <>
-                    <div className="text-sm font-medium">{day.getDate()}</div>
-                    {daySlots.length > 0 && (
-                      <div className="mt-1 space-y-1">
-                        {daySlots.slice(0, 3).map((slot, idx) => {
-                          const colorStyle = getColorStyle(slot.color);
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`h-1 w-full rounded ${colorStyle.bar}`}
-                              title={`${slot.employee}: ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`}
-                            ></div>
-                          );
-                        })}
-                        {daySlots.length > 3 && (
-                          <div className="text-xs text-muted-foreground">+{daySlots.length - 3} more</div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+      ) : (
+        <>
+          <div className="mb-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold">Employee Schedule</h1>
+                <p className="text-sm text-muted-foreground">
+                  View employee timeslots and availability
+                </p>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode("month")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    viewMode === "month" 
+                      ? "bg-black text-white" 
+                      : "bg-card text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Month
+                </button>
+                <button
+                  onClick={() => setViewMode("week")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    viewMode === "week" 
+                      ? "bg-black text-white" 
+                      : "bg-card text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setViewMode("day")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    viewMode === "day" 
+                      ? "bg-black text-white" 
+                      : "bg-card text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Day
+                </button>
+              </div>
+            </div>
+          </div>
 
-        {/* Selected Date Details */}
-        {selectedDate && (
-          <div className="mt-6 rounded-lg border border-border bg-muted/50 p-4">
-            <h3 className="font-semibold mb-3">
-              {selectedDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </h3>
-            {/* Timeslot List */}
-            <div className="space-y-2 mb-4">
-              {getDaySlots(selectedDate).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No timeslots scheduled for this day.</p>
-              ) : (
-                getDaySlots(selectedDate).map((slot) => {
-                  const colorStyle = getColorStyle(slot.color);
-                  return (
-                    <div 
-                      key={slot.id} 
-                      className="flex items-center justify-between p-3 bg-background rounded-lg border border-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${colorStyle.bar}`}></div>
-                        <span className="text-sm font-medium">
-                          {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-2 py-1 rounded ${colorStyle.bg} ${colorStyle.text}`}>
-                          {slot.employee}
-                        </span>
-                        {isLoggedIn && (
-                          <>
-                            <button
-                              onClick={() => handleEditTimeslot(slot)}
-                              className="rounded px-2 py-1 text-xs bg-muted hover:bg-muted/80 transition"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTimeslot(slot.id)}
-                              className="rounded px-2 py-1 text-xs bg-red-100 text-red-800 hover:bg-red-200 transition"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+            {/* Calendar Header */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigateMonth(-1)}
+                  className="rounded-lg p-2 hover:bg-muted transition"
+                >
+                  ←
+                </button>
+                <h2 className="text-lg font-semibold">{monthYear}</h2>
+                <button
+                  onClick={() => navigateMonth(1)}
+                  className="rounded-lg p-2 hover:bg-muted transition"
+                >
+                  →
+                </button>
+              </div>
+              <button
+                onClick={goToToday}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+              >
+                Today
+              </button>
             </div>
 
-            {/* Add/Edit Form - Only for logged in users */}
-            {isLoggedIn && (
-              <div className="border-t border-border pt-4">
-                <h4 className="font-medium mb-3">
-                  {isEditing ? 'Edit Timeslot' : 'Add Timeslot'}
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Start Time</label>
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">End Time</label>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Employee</label>
-                    <input
-                      type="text"
-                      value={employeeName}
-                      onChange={(e) => setEmployeeName(e.target.value)}
-                      placeholder="Enter name"
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Color</label>
-                    <select
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                    >
-                      {colorOptions.map(color => (
-                        <option key={color.value} value={color.value}>{color.label}</option>
-                      ))}
-                    </select>
-                  </div>
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {/* Week day headers */}
+              {weekDays.map(day => (
+                <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
+                  {day}
                 </div>
-                <div className="mt-4 flex gap-2">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={handleUpdateTimeslot}
-                        disabled={!employeeName.trim()}
-                        className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
-                      >
-                        Update Timeslot
-                      </button>
-                      <button
-                        onClick={resetForm}
-                        className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
-                      >
-                        Cancel
-                      </button>
-                    </>
+              ))}
+              
+              {/* Calendar days */}
+              {days.map((day, index) => {
+                const daySlots = day ? getDaySlots(day) : [];
+                return (
+                  <div
+                    key={index}
+                    className={`min-h-[80px] p-2 border border-border rounded-lg transition ${
+                      day ? 'hover:bg-muted cursor-pointer' : ''
+                    } ${
+                      selectedDate && day && 
+                      selectedDate.toDateString() === day.toDateString() 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-background'
+                    }`}
+                    onClick={() => day && setSelectedDate(day)}
+                  >
+                    {day && (
+                      <>
+                        <div className="text-sm font-medium">{day.getDate()}</div>
+                        {daySlots.length > 0 && (
+                          <div className="mt-1 space-y-1">
+                            {daySlots.slice(0, 3).map((slot, idx) => {
+                              const colorStyle = getColorStyle(slot.color);
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`h-1 w-full rounded ${colorStyle.bar}`}
+                                  title={`${slot.employee}: ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`}
+                                ></div>
+                              );
+                            })}
+                            {daySlots.length > 3 && (
+                              <div className="text-xs text-muted-foreground">+{daySlots.length - 3} more</div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Selected Date Details */}
+            {selectedDate && (
+              <div className="mt-6 rounded-lg border border-border bg-muted/50 p-4">
+                <h3 className="font-semibold mb-3">
+                  {selectedDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h3>
+                {/* Timeslot List */}
+                <div className="space-y-2 mb-4">
+                  {getDaySlots(selectedDate).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No timeslots scheduled for this day.</p>
                   ) : (
-                    <button
-                      onClick={handleAddTimeslot}
-                      disabled={!employeeName.trim()}
-                      className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
-                    >
-                      Add Timeslot
-                    </button>
+                    getDaySlots(selectedDate).map((slot) => {
+                      const colorStyle = getColorStyle(slot.color);
+                      return (
+                        <div 
+                          key={slot.id} 
+                          className="flex items-center justify-between p-3 bg-background rounded-lg border border-border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${colorStyle.bar}`}></div>
+                            <span className="text-sm font-medium">
+                              {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-1 rounded ${colorStyle.bg} ${colorStyle.text}`}>
+                              {slot.employee}
+                            </span>
+                            {isLoggedIn && (
+                              <>
+                                <button
+                                  onClick={() => handleEditTimeslot(slot)}
+                                  className="rounded px-2 py-1 text-xs bg-muted hover:bg-muted/80 transition"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTimeslot(slot.id)}
+                                  className="rounded px-2 py-1 text-xs bg-red-100 text-red-800 hover:bg-red-200 transition"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
+
+                {/* Add/Edit Form - Only for logged in users */}
+                {isLoggedIn && (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="font-medium mb-3">
+                      {isEditing ? 'Edit Timeslot' : 'Add Timeslot'}
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Start Time</label>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">End Time</label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Employee</label>
+                        <input
+                          type="text"
+                          value={employeeName}
+                          onChange={(e) => setEmployeeName(e.target.value)}
+                          placeholder="Enter name"
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Color</label>
+                        <select
+                          value={selectedColor}
+                          onChange={(e) => setSelectedColor(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        >
+                          {colorOptions.map(color => (
+                            <option key={color.value} value={color.value}>{color.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={handleUpdateTimeslot}
+                            disabled={!employeeName.trim()}
+                            className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
+                          >
+                            Update Timeslot
+                          </button>
+                          <button
+                            onClick={resetForm}
+                            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleAddTimeslot}
+                          disabled={!employeeName.trim()}
+                          className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition disabled:opacity-50"
+                        >
+                          Add Timeslot
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -502,6 +502,17 @@ export default function NewGarmentPage() {
             <div className="mt-5 grid gap-5">
               <div className="rounded-xl border border-border bg-card p-4">
                 <MultiSelectChips
+                  label="Colors"
+                  categoryKey="colors"
+                  options={COLORS}
+                  value={form.colors}
+                  onChange={(next) => setField("colors", next)}
+                />
+                <div className="mt-1 text-sm text-muted-foreground">Visually dominant colors.</div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
                   label="Pockets"
                   categoryKey="pockets"
                   options={POCKETS}
