@@ -12,6 +12,7 @@ interface TimeSlot {
   endTime: string;
   employee: string;
   color: string;
+  details?: string;
 }
 
 interface DaySchedule {
@@ -34,6 +35,7 @@ export default function PublicSchedulePage() {
   const [endTime, setEndTime] = React.useState("17:00");
   const [employeeName, setEmployeeName] = React.useState("");
   const [selectedColor, setSelectedColor] = React.useState("blue");
+  const [details, setDetails] = React.useState("");
 
   // Check auth state
   React.useEffect(() => {
@@ -130,6 +132,7 @@ export default function PublicSchedulePage() {
       endTime,
       employee: employeeName.trim(),
       color: selectedColor,
+      details: details.trim() || undefined,
     };
     const newSchedules = { ...schedules, [dateKey]: [...(schedules[dateKey] || []), newSlot] };
     setSchedules(newSchedules);
@@ -143,7 +146,7 @@ export default function PublicSchedulePage() {
     const newSchedules = {
       ...schedules,
       [dateKey]: schedules[dateKey]?.map(slot => slot.id === editingSlot.id 
-        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: selectedColor }
+        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: selectedColor, details: details.trim() || undefined }
         : slot) || [],
     };
     setSchedules(newSchedules);
@@ -183,6 +186,7 @@ export default function PublicSchedulePage() {
     setEndTime(slot.endTime);
     setEmployeeName(slot.employee);
     setSelectedColor(slot.color);
+    setDetails(slot.details || "");
     setIsEditing(true);
   };
 
@@ -191,6 +195,7 @@ export default function PublicSchedulePage() {
     setEndTime("17:00");
     setEmployeeName("");
     setSelectedColor("blue");
+    setDetails("");
     setIsEditing(false);
     setEditingSlot(null);
   };
@@ -317,7 +322,7 @@ export default function PublicSchedulePage() {
                 return (
                   <div
                     key={index}
-                    className={`min-h-[80px] p-2 border border-border rounded-lg transition ${
+                    className={`min-h-[100px] sm:min-h-[120px] p-2 sm:p-3 border border-border rounded-lg transition relative group ${
                       day ? 'hover:bg-muted cursor-pointer' : ''
                     } ${
                       selectedDate && day && 
@@ -329,21 +334,29 @@ export default function PublicSchedulePage() {
                   >
                     {day && (
                       <>
-                        <div className="text-sm font-medium">{day.getDate()}</div>
+                        <div className="text-sm sm:text-base font-medium mb-1">{day.getDate()}</div>
                         {daySlots.length > 0 && (
-                          <div className="mt-1 space-y-1">
-                            {daySlots.slice(0, 3).map((slot, idx) => {
+                          <div className="space-y-1.5">
+                            {daySlots.slice(0, 2).map((slot, idx) => {
                               const colorStyle = getColorStyle(slot.color);
                               return (
                                 <div 
                                   key={idx} 
-                                  className={`h-1 w-full rounded ${colorStyle.bar}`}
-                                  title={`${slot.employee}: ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`}
-                                ></div>
+                                  className={`h-2 w-full rounded ${colorStyle.bar} relative`}
+                                >
+                                  {/* Hover tooltip */}
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10 w-max max-w-[200px]">
+                                    <div className="bg-black text-white text-xs rounded-lg px-2 py-1.5 shadow-lg">
+                                      <div className="font-semibold">{slot.employee}</div>
+                                      <div>{formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}</div>
+                                      {slot.details && <div className="mt-1 text-gray-300">{slot.details}</div>}
+                                    </div>
+                                  </div>
+                                </div>
                               );
                             })}
-                            {daySlots.length > 3 && (
-                              <div className="text-xs text-muted-foreground">+{daySlots.length - 3} more</div>
+                            {daySlots.length > 2 && (
+                              <div className="text-xs text-muted-foreground text-center">+{daySlots.length - 2} more</div>
                             )}
                           </div>
                         )}
@@ -387,6 +400,11 @@ export default function PublicSchedulePage() {
                             <span className={`text-xs px-2 py-1 rounded ${colorStyle.bg} ${colorStyle.text}`}>
                               {slot.employee}
                             </span>
+                            {slot.details && (
+                              <span className="text-xs text-muted-foreground" title={slot.details}>
+                                📝
+                              </span>
+                            )}
                             {isLoggedIn && (
                               <>
                                 <button
@@ -457,6 +475,15 @@ export default function PublicSchedulePage() {
                           ))}
                         </select>
                       </div>
+                    </div>
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium mb-1">Details (optional)</label>
+                      <textarea
+                        value={details}
+                        onChange={(e) => setDetails(e.target.value)}
+                        placeholder="Add notes, location, or other details..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+                      />
                     </div>
                     <div className="mt-4 flex gap-2">
                       {isEditing ? (
