@@ -163,17 +163,27 @@ export default function PublicSchedulePage() {
   };
 
   async function saveSchedule(newSchedules: DaySchedule) {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      alert("You must be logged in to save schedule changes");
+      return;
+    }
     setSaving(true);
     try {
-      await authFetch("/api/schedule", {
+      console.log("Saving schedules:", Object.keys(newSchedules).length, "days");
+      const res = await authFetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schedules: newSchedules }),
       });
-    } catch (e) {
+      console.log("Save response:", res.status);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
+      console.log("Schedule saved successfully");
+    } catch (e: any) {
       console.error("Failed to save schedule:", e);
-      alert("Failed to save schedule changes");
+      alert("Failed to save: " + (e.message || "Unknown error"));
     } finally {
       setSaving(false);
     }
