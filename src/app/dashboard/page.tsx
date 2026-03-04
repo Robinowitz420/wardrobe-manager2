@@ -46,7 +46,7 @@ export default function DashboardPage() {
           <div className="mt-1 text-sm text-muted-foreground">Manage staff roles and permissions.</div>
           <div className="mt-4">
             <Link
-              href="#"
+              href="/dashboard/roles"
               className="inline-flex rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-muted"
             >
               Open Roles
@@ -59,7 +59,7 @@ export default function DashboardPage() {
           <div className="mt-1 text-sm text-muted-foreground">Admin tools and reporting.</div>
           <div className="mt-4">
             <Link
-              href="#"
+              href="/dashboard/admin"
               className="inline-flex rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-muted"
             >
               Open Admin
