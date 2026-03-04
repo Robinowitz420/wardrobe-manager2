@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
+import { getAdminFirestore } from "@/lib/firebase/admin";
+import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
 
 export interface TimeSlot {
   id: string;
@@ -39,12 +40,13 @@ export async function GET() {
 // POST schedule - requires auth
 export async function POST(request: Request) {
   try {
-    const user = await requireFirebaseUser(request);
-    console.log("[Schedule POST] Authenticated user:", user.uid);
+    const { user, role } = await requireStaffOrAdmin();
+    console.log("[Schedule POST] Authenticated Clerk user:", user.id, "role:", role);
   } catch (e) {
-    const ae = asAuthError(e);
     console.error("[Schedule POST] Auth error:", e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

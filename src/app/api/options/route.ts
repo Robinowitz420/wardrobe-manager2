@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
+import { getAdminFirestore } from "@/lib/firebase/admin";
+import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ function safeDocId(input: string) {
 
 export async function GET(request: Request) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
 
     const url = new URL(request.url);
     const category = url.searchParams.get("category");
@@ -65,15 +66,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ options: byCategory });
   } catch (e) {
     console.error("/api/options GET failed", e);
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return serverError(e instanceof Error ? e.message : "Failed to read options");
   }
 }
 
 export async function POST(request: Request) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
 
     let payload: unknown;
     try {
@@ -103,8 +103,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ option: { category, value: valueRaw, createdAt } });
   } catch (e) {
     console.error("/api/options POST failed", e);
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return serverError(e instanceof Error ? e.message : "Failed to save option");
   }
 }

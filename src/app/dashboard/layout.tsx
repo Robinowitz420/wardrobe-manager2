@@ -2,35 +2,26 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { useClerk, useUser } from "@clerk/nextjs";
 
 import { SAVE_ERROR_EVENT } from "@/lib/storage/garments";
-import { getFirebaseAuth } from "@/lib/firebase/client";
+import { isStaffOrAdmin, userRoleLabel } from "@/lib/authz";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useClerk();
+  const { user, isLoaded } = useUser();
 
-  const [ready, setReady] = React.useState(false);
-  const [user, setUser] = React.useState<User | null>(null);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setReady(true);
-    });
-    return () => unsub();
-  }, []);
-
-  React.useEffect(() => {
-    if (!ready) return;
+    if (!isLoaded) return;
     if (!user) {
       const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
       router.replace(`/login${next}`);
     }
-  }, [ready, user, router, pathname]);
+  }, [isLoaded, user, router, pathname]);
 
   React.useEffect(() => {
     const handler = (e: Event) => {
@@ -45,14 +36,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   async function onLogout() {
     try {
-      const auth = getFirebaseAuth();
-      await signOut(auth);
+      await signOut();
     } finally {
       router.replace("/login");
     }
   }
 
-  if (!ready) {
+  if (!isLoaded) {
     return (
       <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
@@ -63,6 +53,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) return null;
+
+  if (!isStaffOrAdmin(user)) {
+    return (
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="text-lg font-semibold">Not authorized</div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            Your account does not have staff access. Role: {userRoleLabel(user)}
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => void onLogout()}
+              className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-sm transition hover:bg-muted"
+            >
+              Log out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isNewGarmentPage = pathname === "/dashboard/garments/new";
 

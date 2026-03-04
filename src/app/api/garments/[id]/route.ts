@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { asAuthError, getAdminFirestore, requireFirebaseUser } from "@/lib/firebase/admin";
+import { getAdminFirestore } from "@/lib/firebase/admin";
+import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
 
 export const runtime = "nodejs";
 
@@ -27,10 +28,9 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
   } catch (e) {
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -66,10 +66,9 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
   } catch (e) {
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -146,10 +145,9 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
   } catch (e) {
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

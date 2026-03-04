@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { access, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 
-import { asAuthError, requireFirebaseUser } from "@/lib/firebase/admin";
+import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
 
 export const runtime = "nodejs";
 
@@ -34,10 +34,9 @@ async function exists(p: string): Promise<boolean> {
 
 export async function POST(request: Request) {
   try {
-    await requireFirebaseUser(request);
+    await requireStaffOrAdmin();
   } catch (e) {
-    const ae = asAuthError(e);
-    if (ae) return NextResponse.json({ error: ae.message }, { status: ae.status });
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

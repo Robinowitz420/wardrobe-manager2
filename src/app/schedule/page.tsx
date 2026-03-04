@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase/client";
-import { authFetch } from "@/lib/firebase/auth-fetch";
+import { useUser } from "@clerk/nextjs";
+import { isStaffOrAdmin } from "@/lib/authz";
 
 interface TimeSlot {
   id: string;
@@ -20,7 +19,7 @@ interface DaySchedule {
 }
 
 export default function PublicSchedulePage() {
-  const [user, setUser] = React.useState<User | null>(null);
+  const { user, isLoaded } = useUser();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -36,15 +35,6 @@ export default function PublicSchedulePage() {
   const [employeeName, setEmployeeName] = React.useState("");
   const [selectedColor, setSelectedColor] = React.useState("blue");
   const [details, setDetails] = React.useState("");
-
-  // Check auth state
-  React.useEffect(() => {
-    const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return () => unsub();
-  }, []);
 
   // Fetch schedule on mount
   React.useEffect(() => {
@@ -64,7 +54,7 @@ export default function PublicSchedulePage() {
     fetchSchedule();
   }, []);
 
-  const isLoggedIn = Boolean(user);
+  const canEdit = isLoaded && isStaffOrAdmin(user);
 
   const colorOptions = [
     { value: "blue", label: "Blue", bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-200" },
@@ -157,7 +147,7 @@ export default function PublicSchedulePage() {
   };
 
   const handleDeleteTimeslot = async (slotId: string) => {
-    if (!selectedDate || !isLoggedIn) return;
+    if (!selectedDate || !canEdit) return;
     console.log("[Schedule UI] Delete timeslot clicked", slotId);
     const dateKey = getDateKey(selectedDate);
     const newSchedules = { ...schedules, [dateKey]: schedules[dateKey]?.filter(slot => slot.id !== slotId) || [] };
@@ -166,14 +156,11 @@ export default function PublicSchedulePage() {
   };
 
   async function saveSchedule(newSchedules: DaySchedule) {
-    if (!isLoggedIn) {
-      alert("You must be logged in to save schedule changes");
-      return;
-    }
+    if (!canEdit) return;
     setSaving(true);
     try {
       console.log("Saving schedules:", Object.keys(newSchedules).length, "days");
-      const res = await authFetch("/api/schedule", {
+      const res = await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ schedules: newSchedules }),
@@ -193,7 +180,7 @@ export default function PublicSchedulePage() {
   }
 
   const handleEditTimeslot = (slot: TimeSlot) => {
-    if (!isLoggedIn) return;
+    if (!canEdit) return;
     setEditingSlot(slot);
     setStartTime(slot.startTime);
     setEndTime(slot.endTime);
@@ -225,9 +212,11 @@ export default function PublicSchedulePage() {
         {saving && (
           <span className="text-sm text-muted-foreground">Saving...</span>
         )}
-        {isLoggedIn ? (
+        {canEdit ? (
           <>
-            <span className="text-sm text-muted-foreground">Logged in as {user?.email}</span>
+            <span className="text-sm text-muted-foreground">
+              Logged in as {user?.primaryEmailAddress?.emailAddress || ""}
+            </span>
             <Link
               href="/dashboard"
               className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
@@ -418,7 +407,7 @@ export default function PublicSchedulePage() {
                                 📝
                               </span>
                             )}
-                            {isLoggedIn && (
+                            {canEdit && (
                               <>
                                 <button
                                   onClick={() => handleEditTimeslot(slot)}
@@ -442,7 +431,7 @@ export default function PublicSchedulePage() {
                 </div>
 
                 {/* Add/Edit Form - Only for logged in users */}
-                {isLoggedIn && (
+                {canEdit && (
                   <div className="border-t border-border pt-4">
                     <h4 className="font-medium mb-3">
                       {isEditing ? 'Edit Timeslot' : 'Add Timeslot'}
