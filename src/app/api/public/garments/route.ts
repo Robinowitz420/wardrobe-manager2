@@ -37,26 +37,37 @@ function toCard(docId: string, raw: any) {
 }
 
 export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  const limitRaw = url.searchParams.get("limit");
-  const limit = Math.min(Math.max(Number(limitRaw ?? 30) || 30, 1), 60);
+  try {
+    const url = new URL(request.url);
+    const limitRaw = url.searchParams.get("limit");
+    const limit = Math.min(Math.max(Number(limitRaw ?? 30) || 30, 1), 60);
 
-  const db = getAdminFirestore();
+    const db = getAdminFirestore();
 
-  const snap = await db
-    .collection("garments")
-    .where("attributes.state", "==", "Available")
-    .limit(limit)
-    .get();
+    const snap = await db
+      .collection("garments")
+      .where("attributes.state", "==", "Available")
+      .limit(limit)
+      .get();
 
-  const data = snap.docs.map((d) => toCard(d.id, d.data()));
+    const data = snap.docs.map((d) => toCard(d.id, d.data()));
 
-  return NextResponse.json(
-    { data, nextCursor: null },
-    {
-      headers: {
-        "cache-control": "no-store",
+    return NextResponse.json(
+      { data, nextCursor: null },
+      {
+        headers: {
+          "cache-control": "no-store",
+        },
+      }
+    );
+  } catch (e: any) {
+    console.error("[Public garments] Error:", e);
+    return NextResponse.json(
+      {
+        error: "PUBLIC_GARMENTS_FAILED",
+        message: typeof e?.message === "string" ? e.message : "Unknown error",
       },
-    }
-  );
+      { status: 500, headers: { "cache-control": "no-store" } }
+    );
+  }
 }
