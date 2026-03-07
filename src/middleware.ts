@@ -13,5 +13,8 @@ export default clerkMiddleware((auth, req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/:path((?!public/).*)",
+  ],
 };
