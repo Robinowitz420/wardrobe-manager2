@@ -18,6 +18,12 @@ interface DaySchedule {
   [dateKey: string]: TimeSlot[];
 }
 
+interface StaffRole {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export default function PublicSchedulePage() {
   const { user, isLoaded } = useUser();
   const [loading, setLoading] = React.useState(true);
@@ -28,6 +34,8 @@ export default function PublicSchedulePage() {
   const [schedules, setSchedules] = React.useState<DaySchedule>({});
   const [isEditing, setIsEditing] = React.useState(false);
   const [editingSlot, setEditingSlot] = React.useState<TimeSlot | null>(null);
+
+  const [staff, setStaff] = React.useState<StaffRole[]>([]);
 
   // Form state for adding/editing
   const [startTime, setStartTime] = React.useState("09:00");
@@ -54,6 +62,21 @@ export default function PublicSchedulePage() {
     fetchSchedule();
   }, []);
 
+  React.useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const res = await fetch("/api/staff-roles");
+        if (!res.ok) return;
+        const data = await res.json();
+        setStaff(data.staff || []);
+      } catch (e) {
+        console.error("Failed to fetch staff:", e);
+      }
+    }
+
+    fetchStaff();
+  }, []);
+
   const canEdit = isLoaded && isStaffOrAdmin(user);
 
   const colorOptions = [
@@ -70,6 +93,17 @@ export default function PublicSchedulePage() {
   const getDateKey = (date: Date) => date.toISOString().split('T')[0];
   const getColorStyle = (colorValue: string) => colorOptions.find(c => c.value === colorValue) || colorOptions[0];
   const getDaySlots = (date: Date | null) => date ? schedules[getDateKey(date)] || [] : [];
+
+  const roleToColor: Record<string, string> = {
+    admin: "red",
+    staff: "blue",
+  };
+
+  const getEmployeeColor = (employee: string) => {
+    const staffMember = staff.find((s) => s.name === employee);
+    const role = staffMember?.role || "";
+    return roleToColor[role] || "gray";
+  };
   const formatTimeDisplay = (time: string) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
@@ -117,12 +151,14 @@ export default function PublicSchedulePage() {
     if (!selectedDate || !employeeName.trim()) return;
     console.log("[Schedule UI] Add timeslot clicked");
     const dateKey = getDateKey(selectedDate);
+
+    const derivedColor = getEmployeeColor(employeeName.trim());
     const newSlot: TimeSlot = {
       id: Date.now().toString(),
       startTime,
       endTime,
       employee: employeeName.trim(),
-      color: selectedColor,
+      color: derivedColor,
       details: details.trim() || undefined,
     };
     const newSchedules = { ...schedules, [dateKey]: [...(schedules[dateKey] || []), newSlot] };
@@ -135,10 +171,11 @@ export default function PublicSchedulePage() {
     if (!selectedDate || !editingSlot || !employeeName.trim()) return;
     console.log("[Schedule UI] Update timeslot clicked", editingSlot.id);
     const dateKey = getDateKey(selectedDate);
+    const derivedColor = getEmployeeColor(employeeName.trim());
     const newSchedules = {
       ...schedules,
       [dateKey]: schedules[dateKey]?.map(slot => slot.id === editingSlot.id 
-        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: selectedColor, details: details.trim() || undefined }
+        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: derivedColor, details: details.trim() || undefined }
         : slot) || [],
     };
     setSchedules(newSchedules);
@@ -338,16 +375,18 @@ export default function PublicSchedulePage() {
                       <>
                         <div className="text-sm sm:text-base font-medium mb-1">{day.getDate()}</div>
                         {daySlots.length > 0 && (
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {daySlots.slice(0, 2).map((slot, idx) => {
                               const colorStyle = getColorStyle(slot.color);
                               return (
-                                <div 
-                                  key={idx} 
-                                  className={`h-2 w-full rounded ${colorStyle.bar} relative`}
+                                <div
+                                  key={idx}
+                                  className="relative group/slot"
                                 >
-                                  {/* Hover tooltip */}
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10 w-max max-w-[200px]">
+                                  <div
+                                    className={`h-4 w-full rounded ${colorStyle.bar}`}
+                                  />
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/slot:block z-10 w-max max-w-[240px]">
                                     <div className="bg-black text-white text-xs rounded-lg px-2 py-1.5 shadow-lg">
                                       <div className="font-semibold">{slot.employee}</div>
                                       <div>{formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}</div>
@@ -457,25 +496,31 @@ export default function PublicSchedulePage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1">Employee</label>
-                        <input
-                          type="text"
+                        <select
                           value={employeeName}
-                          onChange={(e) => setEmployeeName(e.target.value)}
-                          placeholder="Enter name"
+                          onChange={(e) => {
+                            const name = e.target.value;
+                            setEmployeeName(name);
+                            if (name) setSelectedColor(getEmployeeColor(name));
+                          }}
                           className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                        />
+                        >
+                          <option value="">Select employee</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.name}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1">Color</label>
-                        <select
+                        <input
+                          type="text"
                           value={selectedColor}
-                          onChange={(e) => setSelectedColor(e.target.value)}
-                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                        >
-                          {colorOptions.map(color => (
-                            <option key={color.value} value={color.value}>{color.label}</option>
-                          ))}
-                        </select>
+                          readOnly
+                          className="h-10 w-full rounded-lg border border-border bg-muted px-3 text-sm"
+                        />
                       </div>
                     </div>
                     <div className="mt-3">
