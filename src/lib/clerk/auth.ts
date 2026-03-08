@@ -15,6 +15,10 @@ export function roleFromPublicMetadata(value: unknown): Role | null {
   return null;
 }
 
+export function getRoleFromClaims(claims: any): Role | null {
+  return roleFromPublicMetadata(claims?.metadata?.role || claims?.role);
+}
+
 export async function requireClerkUser() {
   const { userId } = await auth();
   if (!userId) throw new ClerkAuthzError("Unauthorized", 401);

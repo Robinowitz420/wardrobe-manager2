@@ -34,13 +34,6 @@ function serverError(message: string) {
 }
 
 export async function GET() {
-  try {
-    await requireStaffOrAdmin();
-  } catch (e) {
-    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const db = getAdminFirestore();
   const snap = await db.collection("staff_roles").orderBy("name").get();
   const staff = snap.docs.map(doc => ({

@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
-import { isStaffOrAdmin } from "@/lib/authz";
 
 interface TimeSlot {
   id: string;
@@ -25,7 +23,8 @@ interface StaffRole {
 }
 
 export default function PublicSchedulePage() {
-  const { user, isLoaded } = useUser();
+  const [user, setUser] = React.useState<any>(null);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -43,6 +42,24 @@ export default function PublicSchedulePage() {
   const [employeeName, setEmployeeName] = React.useState("");
   const [selectedColor, setSelectedColor] = React.useState("blue");
   const [details, setDetails] = React.useState("");
+
+  // Fetch user auth status on mount (optional - for edit permissions)
+  React.useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/check");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user || null);
+        }
+      } catch {
+        // Not logged in - that's fine, page is public
+      } finally {
+        setIsLoaded(true);
+      }
+    }
+    checkAuth();
+  }, []);
 
   // Fetch schedule on mount
   React.useEffect(() => {
@@ -77,7 +94,7 @@ export default function PublicSchedulePage() {
     fetchStaff();
   }, []);
 
-  const canEdit = isLoaded && isStaffOrAdmin(user);
+  const canEdit = Boolean(user?.role === "staff" || user?.role === "admin");
 
   const colorOptions = [
     { value: "blue", label: "Blue", bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-200" },
