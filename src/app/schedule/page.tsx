@@ -95,6 +95,8 @@ export default function PublicSchedulePage() {
   }, []);
 
   const canEdit = Boolean(user?.role === "staff" || user?.role === "admin");
+  const isLoggedIn = Boolean(user);
+  const [submitting, setSubmitting] = React.useState(false);
 
   const colorOptions = [
     { value: "blue", label: "Blue", bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-200" },
@@ -224,6 +226,34 @@ export default function PublicSchedulePage() {
       setSaving(false);
     }
   }
+
+  const handleSubmitForApproval = async () => {
+    if (!selectedDate || !employeeName.trim() || !isLoggedIn) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/schedule/pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateKey: getDateKey(selectedDate),
+          startTime,
+          endTime,
+          employee: employeeName.trim(),
+          details: details.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(error.error || "Failed to submit");
+      }
+      alert("Hours submitted for approval! Staff will review shortly.");
+      resetForm();
+    } catch (e: any) {
+      alert("Failed to submit: " + e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleEditTimeslot = (slot: TimeSlot) => {
     if (!canEdit) return;
@@ -479,7 +509,7 @@ export default function PublicSchedulePage() {
                 </div>
 
                 {/* Add/Edit Form - Only for logged in users */}
-                {canEdit && (
+                {canEdit ? (
                   <div className="border-t border-border pt-4">
                     <h4 className="font-medium mb-3">
                       {isEditing ? 'Edit Timeslot' : 'Add Timeslot'}
@@ -571,7 +601,84 @@ export default function PublicSchedulePage() {
                       )}
                     </div>
                   </div>
-                )}
+                ) : isLoggedIn ? (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="font-medium mb-3">Submit Hours for Approval</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Staff will review and add your hours to the schedule.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Start Time</label>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">End Time</label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Employee</label>
+                        <select
+                          value={employeeName}
+                          onChange={(e) => setEmployeeName(e.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                        >
+                          <option value="">Select employee</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.name}>
+                              {s.name} {s.emojis}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Your Name</label>
+                        <input
+                          type="text"
+                          value={user?.email || ""}
+                          readOnly
+                          className="h-10 w-full rounded-lg border border-border bg-muted px-3 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium mb-1">Details (optional)</label>
+                      <textarea
+                        value={details}
+                        onChange={(e) => setDetails(e.target.value)}
+                        placeholder="Add notes about your availability..."
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+                      />
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSubmitForApproval}
+                        disabled={!employeeName.trim() || submitting}
+                        className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition disabled:opacity-50"
+                      >
+                        {submitting ? "Submitting..." : "Submit for Approval"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>

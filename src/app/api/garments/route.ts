@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAdminFirestore } from "@/lib/firebase/admin";
-import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
+import { ClerkAuthzError, requireStaffOrAdmin, requireSignedInUser } from "@/lib/clerk/auth";
 
 export const runtime = "nodejs";
 
@@ -32,7 +32,7 @@ function maybeIso(value: unknown): string | null {
 
 export async function GET(request: Request) {
   try {
-    await requireStaffOrAdmin();
+    await requireSignedInUser();
   } catch (e) {
     if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

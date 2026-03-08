@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 
 import { SAVE_ERROR_EVENT } from "@/lib/storage/garments";
-import { isStaffOrAdmin, userRoleLabel } from "@/lib/authz";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -53,28 +52,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) return null;
-
-  if (!isStaffOrAdmin(user)) {
-    return (
-      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <div className="text-lg font-semibold">Not authorized</div>
-          <div className="mt-2 text-sm text-muted-foreground">
-            Your account does not have staff access. Role: {userRoleLabel(user)}
-          </div>
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={() => void onLogout()}
-              className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-sm transition hover:bg-muted"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const isNewGarmentPage = pathname === "/dashboard/garments/new";
 

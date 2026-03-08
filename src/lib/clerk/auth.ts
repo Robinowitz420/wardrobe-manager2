@@ -36,8 +36,9 @@ export async function requireStaffOrAdmin() {
   return { user, role };
 }
 
-export async function allowSignedInStaffOrAdminForDashboard() {
-  const user = await requireClerkUser();
-  const role = roleFromPublicMetadata(user.publicMetadata?.role);
-  return { user, role };
+export async function requireSignedInUser() {
+  const { userId, sessionClaims } = await auth();
+  if (!userId) throw new ClerkAuthzError("Unauthorized", 401);
+  const role = getRoleFromClaims(sessionClaims);
+  return { userId, role };
 }
