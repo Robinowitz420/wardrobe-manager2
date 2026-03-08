@@ -134,7 +134,7 @@ export default function GarmentsIndexPage() {
                     {primary?.src || primary?.dataUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img 
-                        src={primary.src || primary.dataUrl} 
+                        src={`/api/image-proxy?url=${encodeURIComponent(primary.src || primary.dataUrl || "")}`}
                         alt={g.name} 
                         className="h-full w-full object-contain"
                       />
