@@ -130,11 +130,20 @@ export default function GarmentsIndexPage() {
                 className="rounded-2xl border border-border bg-card p-4 hover:bg-muted/40"
               >
                 <div className="flex gap-4">
-                  <div className="h-20 w-16 overflow-hidden rounded-xl border border-border bg-muted">
+                  <div className="h-20 w-16 overflow-hidden rounded-xl border border-border bg-muted flex items-center justify-center">
                     {primary ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={primary.src ?? primary.dataUrl} alt={g.name} className="h-full w-full object-contain" />
-                    ) : null}
+                      <img 
+                        src={primary.src ?? primary.dataUrl} 
+                        alt={g.name} 
+                        className="h-full w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No photo</span>
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
