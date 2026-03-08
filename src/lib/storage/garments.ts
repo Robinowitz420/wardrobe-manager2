@@ -1,4 +1,3 @@
-import { authFetch } from "@/lib/firebase/auth-fetch";
 import type { Garment, GarmentCreateInput } from "@/lib/validations/garment";
 
 const CHANGE_EVENT = "wardrobe_manager_garments_changed";
@@ -97,7 +96,7 @@ function setCache(next: Garment[]) {
 async function fetchAllFromApi(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   try {
-    const res = await authFetch("/api/garments", { method: "GET" });
+    const res = await fetch("/api/garments", { method: "GET" });
     const json = (await res.json().catch(() => null)) as any;
     if (!res.ok || !json || !Array.isArray(json.garments)) return false;
 
@@ -130,7 +129,7 @@ async function fetchAllFromApi(): Promise<boolean> {
 async function fetchOneFromApi(id: string): Promise<Garment | null> {
   if (typeof window === "undefined") return null;
   try {
-    const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "GET" });
+    const res = await fetch(`/api/garments/${encodeURIComponent(id)}`, { method: "GET" });
     const json = (await res.json().catch(() => null)) as any;
     if (!res.ok || !json || !json.garment) return null;
     const g = normalizeLegacyGarment(json.garment);
@@ -168,7 +167,7 @@ async function persistCreate(garment: Garment) {
     }
     const { photos: _ignoredPhotos, ...attributes } = garment as any;
 
-    const res = await authFetch("/api/garments", {
+    const res = await fetch("/api/garments", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -203,7 +202,7 @@ async function persistUpdate(garment: Garment) {
     }
     const { photos: _ignoredPhotos, ...attributes } = garment as any;
 
-    const res = await authFetch(`/api/garments/${encodeURIComponent(garment.id)}`,
+    const res = await fetch(`/api/garments/${encodeURIComponent(garment.id)}`,
       {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -240,7 +239,7 @@ async function persistUpdate(garment: Garment) {
 async function persistDelete(id: string) {
   if (typeof window === "undefined") return;
   try {
-    const res = await authFetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
+    const res = await fetch(`/api/garments/${encodeURIComponent(id)}`, { method: "DELETE" });
     if (res.status === 404) {
       // Idempotent delete: already deleted on the server.
       return;
