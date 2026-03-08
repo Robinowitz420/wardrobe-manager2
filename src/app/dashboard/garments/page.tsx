@@ -3,9 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { deleteGarment, listGarments } from "@/lib/storage/garments";
-
-const CHANGE_EVENT = "wardrobe_manager_garments_changed";
+type GarmentListItem = {
+  id: string;
+  name: string;
+  completionStatus?: string;
+  photos: Array<{ src?: string; dataUrl?: string; isPrimary?: boolean }>;
+  brand?: string;
+  state?: string;
+  glitcoinBorrow?: number;
+  attributes?: any;
+};
 
 function stateBadgeClasses(state: string) {
   if (state === "Available") return "border-emerald-300/60 bg-emerald-50 text-emerald-900";
@@ -16,16 +23,62 @@ function stateBadgeClasses(state: string) {
 }
 
 export default function GarmentsIndexPage() {
-  const [items, setItems] = React.useState(() => listGarments());
+  const [items, setItems] = React.useState<GarmentListItem[]>([]);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setItems(listGarments());
+    let mounted = true;
 
-    const onChange = () => setItems(listGarments());
-    window.addEventListener(CHANGE_EVENT, onChange);
-    return () => window.removeEventListener(CHANGE_EVENT, onChange);
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/garments", { cache: "no-store" });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (!mounted) return;
+        setItems(Array.isArray(data?.garments) ? data.garments : []);
+      } catch (e) {
+        console.error("Failed to load garments:", e);
+        if (!mounted) return;
+        setItems([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  async function handleDelete(id: string) {
+    if (deletingId) return;
+    const ok = window.confirm("Delete this garment? This cannot be undone.");
+    if (!ok) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/garments/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || `HTTP ${res.status}`);
+      }
+
+      const refresh = await fetch("/api/garments", { cache: "no-store" });
+      const data = await refresh.json().catch(() => ({}));
+      setItems(Array.isArray(data?.garments) ? data.garments : []);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to delete garment";
+      window.alert(msg);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
@@ -54,7 +107,11 @@ export default function GarmentsIndexPage() {
         </Link>
       </div>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="mt-6 rounded-2xl border border-border bg-card p-5">
+          <p className="text-sm text-muted-foreground">Loading garments...</p>
+        </div>
+      ) : items.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">
             No garments yet. Start with a new intake.
@@ -65,6 +122,7 @@ export default function GarmentsIndexPage() {
           {items.map((g) => {
             const primary = g.photos.find((p) => p.isPrimary) ?? g.photos[0] ?? null;
             const completion = g.completionStatus === "DRAFT" ? "Draft" : "Complete";
+            const state = g.state ?? "";
             return (
               <Link
                 key={g.id}
@@ -90,25 +148,16 @@ export default function GarmentsIndexPage() {
                       <div className="shrink-0">
                         <div className="flex flex-col items-end gap-2">
                           <span
-                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${stateBadgeClasses(g.state)}`}
+                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${stateBadgeClasses(state)}`}
                           >
-                            {g.state}
+                            {state}
                           </span>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              if (deletingId) return;
-                              const ok = window.confirm("Delete this garment? This cannot be undone.");
-                              if (!ok) return;
-                              setDeletingId(g.id);
-                              void deleteGarment(g.id)
-                                .catch((err) => {
-                                  const msg = err instanceof Error ? err.message : "Failed to delete garment";
-                                  window.alert(msg);
-                                })
-                                .finally(() => setDeletingId(null));
+                              void handleDelete(g.id);
                             }}
                             disabled={deletingId === g.id}
                             className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition disabled:opacity-60"
