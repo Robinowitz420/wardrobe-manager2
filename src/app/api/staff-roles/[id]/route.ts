@@ -34,19 +34,40 @@ export async function PATCH(
 
   const name = typeof (payload as any)?.name === "string" ? (payload as any).name.trim() : "";
   const emojis = typeof (payload as any)?.emojis === "string" ? (payload as any).emojis.trim() : "";
+  const referralCode = typeof (payload as any)?.referralCode === "string" ? (payload as any).referralCode.trim().toUpperCase() : undefined;
 
   if (!name) return badRequest("Missing name");
   if (!emojis) return badRequest("Missing emojis");
 
   const db = getAdminFirestore();
+
+  // If referral code is being updated, check for duplicates
+  if (referralCode) {
+    const existingCode = await db.collection("staff_roles")
+      .where("referralCode", "==", referralCode)
+      .get();
+    
+    // Check if any doc with this code is not the current one
+    const duplicate = existingCode.docs.find(doc => doc.id !== id);
+    if (duplicate) {
+      return badRequest(`Referral code "${referralCode}" is already in use`);
+    }
+  }
+
   const updatedAt = nowIso();
-  await db.collection("staff_roles").doc(id).update({
+  const updateData: any = {
     name,
     emojis,
     updatedAt,
-  });
+  };
+  
+  if (referralCode) {
+    updateData.referralCode = referralCode;
+  }
 
-  return NextResponse.json({ staff: { id, name, emojis, updatedAt } });
+  await db.collection("staff_roles").doc(id).update(updateData);
+
+  return NextResponse.json({ staff: { id, name, emojis, referralCode: referralCode || undefined, updatedAt } });
 }
 
 export async function DELETE(

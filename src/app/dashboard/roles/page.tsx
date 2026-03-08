@@ -6,6 +6,7 @@ interface StaffRole {
   id: string;
   name: string;
   emojis: string;
+  referralCode: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -16,6 +17,8 @@ export default function EmployeeRolesPage() {
   const [editing, setEditing] = React.useState<string | null>(null);
   const [newName, setNewName] = React.useState("");
   const [newEmojis, setNewEmojis] = React.useState("");
+  const [newReferralCode, setNewReferralCode] = React.useState("");
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
   // Load staff
   React.useEffect(() => {
@@ -38,29 +41,41 @@ export default function EmployeeRolesPage() {
     const res = await fetch("/api/staff-roles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), emojis: newEmojis.trim() }),
+      body: JSON.stringify({ 
+        name: newName.trim(), 
+        emojis: newEmojis.trim(),
+        referralCode: newReferralCode.trim() || undefined 
+      }),
     });
     if (res.ok) {
       const data = await res.json();
       setStaff(s => [...s, data.staff]);
       setNewName("");
       setNewEmojis("");
+      setNewReferralCode("");
     } else {
-      alert("Failed to add staff");
+      const err = await res.json().catch(() => ({ error: "Failed to add staff" }));
+      alert(err.error || "Failed to add staff");
     }
   }
 
-  async function handleUpdate(id: string, name: string, emojis: string) {
+  async function handleUpdate(id: string, name: string, emojis: string, referralCode: string) {
     const res = await fetch(`/api/staff-roles/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), emojis: emojis.trim() }),
+      body: JSON.stringify({ 
+        name: name.trim(), 
+        emojis: emojis.trim(),
+        referralCode: referralCode.trim() || undefined
+      }),
     });
     if (res.ok) {
-      setStaff(s => s.map(st => st.id === id ? { ...st, name: name.trim(), emojis: emojis.trim() } : st));
+      const data = await res.json();
+      setStaff(s => s.map(st => st.id === id ? { ...st, ...data.staff } : st));
       setEditing(null);
     } else {
-      alert("Failed to update staff");
+      const err = await res.json().catch(() => ({ error: "Failed to update staff" }));
+      alert(err.error || "Failed to update staff");
     }
   }
 
@@ -94,7 +109,7 @@ export default function EmployeeRolesPage() {
 
         {/* Add new */}
         <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <input
               type="text"
               placeholder="Name"
@@ -109,6 +124,13 @@ export default function EmployeeRolesPage() {
               onChange={(e) => setNewEmojis(e.target.value)}
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
             />
+            <input
+              type="text"
+              placeholder="Referral Code (auto if blank)"
+              value={newReferralCode}
+              onChange={(e) => setNewReferralCode(e.target.value)}
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
+            />
             <button
               onClick={handleAdd}
               disabled={!newName.trim() || !newEmojis.trim()}
@@ -117,6 +139,9 @@ export default function EmployeeRolesPage() {
               Add Staff
             </button>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Referral code will be auto-generated from name if left blank (e.g., "Varuna" → "VARUNA")
+          </p>
           <div className="mt-4">
             <button
               onClick={() => {
@@ -144,13 +169,17 @@ export default function EmployeeRolesPage() {
                     await fetch("/api/staff-roles", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name: member.name, emojis: member.emojis }),
+                      body: JSON.stringify({ 
+                        name: member.name, 
+                        emojis: member.emojis,
+                        // Referral codes will be auto-generated
+                      }),
                     });
                   } catch (e) {
                     console.error("Failed to seed staff:", member.name, e);
                   }
                 });
-                alert("Imported staff list");
+                alert("Imported staff list with auto-generated referral codes");
               }}
               className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
             >
@@ -167,7 +196,7 @@ export default function EmployeeRolesPage() {
             staff.map((member) => (
               <div key={member.id} className="rounded-lg border border-border bg-background p-3">
                 {editing === member.id ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-4">
                     <input
                       type="text"
                       defaultValue={member.name}
@@ -180,12 +209,20 @@ export default function EmployeeRolesPage() {
                       id={`emojis-${member.id}`}
                       className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
                     />
+                    <input
+                      type="text"
+                      defaultValue={member.referralCode || ""}
+                      id={`ref-${member.id}`}
+                      placeholder="Referral code"
+                      className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
+                    />
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
                           const nameEl = document.getElementById(`name-${member.id}`) as HTMLInputElement;
                           const emojisEl = document.getElementById(`emojis-${member.id}`) as HTMLInputElement;
-                          handleUpdate(member.id, nameEl.value, emojisEl.value);
+                          const refEl = document.getElementById(`ref-${member.id}`) as HTMLInputElement;
+                          handleUpdate(member.id, nameEl.value, emojisEl.value, refEl.value);
                         }}
                         className="rounded-lg bg-black px-3 py-2 text-xs font-medium text-white hover:bg-gray-800"
                       >
@@ -202,8 +239,26 @@ export default function EmployeeRolesPage() {
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">{member.name}</div>
-                      <div className="text-lg">{member.emojis}</div>
+                      <div className="font-medium">{member.name} <span className="text-lg">{member.emojis}</span></div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Ref Code: <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{member.referralCode || "—"}</span>
+                        {member.referralCode && (
+                          <>
+                            {" • "}
+                            <button
+                              onClick={() => {
+                                const url = `https://wardrobe-manager2.vercel.app/?ref=${member.referralCode}`;
+                                navigator.clipboard.writeText(url);
+                                setCopiedId(member.id);
+                                setTimeout(() => setCopiedId(null), 2000);
+                              }}
+                              className="text-blue-600 hover:underline text-xs"
+                            >
+                              {copiedId === member.id ? "Copied!" : "Copy URL"}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
