@@ -1,20 +1,21 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
-
-const isStaffApiRoute = createRouteMatcher([
-  "/api/(?!public/)(.*)",
-]);
+const isDashboardRoute = createRouteMatcher(["/dashboard(.*)"]);
+const isPublicApiRoute = createRouteMatcher(["/api/public(.*)"]);
 
 export default clerkMiddleware((auth, req) => {
-  if (isProtectedRoute(req)) auth.protect();
+  if (isDashboardRoute(req)) {
+    auth.protect();
+    return;
+  }
 
-  if (isStaffApiRoute(req)) auth.protect();
+  if (isPublicApiRoute(req)) return;
+
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    auth.protect();
+  }
 });
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/api/:path((?!public/).*)",
-  ],
+  matcher: ["/dashboard/:path*", "/api/:path*"],
 };
