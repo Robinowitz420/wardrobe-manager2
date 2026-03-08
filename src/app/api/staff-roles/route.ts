@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 interface StaffRole {
   id: string;
   name: string;
-  role: string;
+  emojis: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,7 +37,7 @@ export async function GET() {
   const staff = snap.docs.map(doc => ({
     id: doc.id,
     name: doc.data()?.name || "",
-    role: doc.data()?.role || "",
+    emojis: doc.data()?.emojis || "",
     createdAt: doc.data()?.createdAt || nowIso(),
     updatedAt: doc.data()?.updatedAt || nowIso(),
   }));
@@ -60,19 +60,19 @@ export async function POST(request: Request) {
   }
 
   const name = typeof (payload as any)?.name === "string" ? (payload as any).name.trim() : "";
-  const role = typeof (payload as any)?.role === "string" ? (payload as any).role.trim() : "";
+  const emojis = typeof (payload as any)?.emojis === "string" ? (payload as any).emojis.trim() : "";
 
   if (!name) return badRequest("Missing name");
-  if (!role) return badRequest("Missing role");
+  if (!emojis) return badRequest("Missing emojis");
 
   const db = getAdminFirestore();
   const createdAt = nowIso();
   const docRef = await db.collection("staff_roles").add({
     name,
-    role,
+    emojis,
     createdAt,
     updatedAt: createdAt,
   });
 
-  return NextResponse.json({ staff: { id: docRef.id, name, role, createdAt, updatedAt: createdAt } });
+  return NextResponse.json({ staff: { id: docRef.id, name, emojis, createdAt, updatedAt: createdAt } });
 }

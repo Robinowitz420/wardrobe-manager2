@@ -33,20 +33,20 @@ export async function PATCH(
   }
 
   const name = typeof (payload as any)?.name === "string" ? (payload as any).name.trim() : "";
-  const role = typeof (payload as any)?.role === "string" ? (payload as any).role.trim() : "";
+  const emojis = typeof (payload as any)?.emojis === "string" ? (payload as any).emojis.trim() : "";
 
   if (!name) return badRequest("Missing name");
-  if (!role) return badRequest("Missing role");
+  if (!emojis) return badRequest("Missing emojis");
 
   const db = getAdminFirestore();
   const updatedAt = nowIso();
   await db.collection("staff_roles").doc(id).update({
     name,
-    role,
+    emojis,
     updatedAt,
   });
 
-  return NextResponse.json({ staff: { id, name, role, updatedAt } });
+  return NextResponse.json({ staff: { id, name, emojis, updatedAt } });
 }
 
 export async function DELETE(

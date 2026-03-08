@@ -5,7 +5,7 @@ import * as React from "react";
 interface StaffRole {
   id: string;
   name: string;
-  role: string;
+  emojis: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,7 +15,7 @@ export default function EmployeeRolesPage() {
   const [loading, setLoading] = React.useState(true);
   const [editing, setEditing] = React.useState<string | null>(null);
   const [newName, setNewName] = React.useState("");
-  const [newRole, setNewRole] = React.useState("");
+  const [newEmojis, setNewEmojis] = React.useState("");
 
   // Load staff
   React.useEffect(() => {
@@ -34,30 +34,30 @@ export default function EmployeeRolesPage() {
   }, []);
 
   async function handleAdd() {
-    if (!newName.trim() || !newRole.trim()) return;
+    if (!newName.trim() || !newEmojis.trim()) return;
     const res = await fetch("/api/staff-roles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), role: newRole.trim() }),
+      body: JSON.stringify({ name: newName.trim(), emojis: newEmojis.trim() }),
     });
     if (res.ok) {
       const data = await res.json();
       setStaff(s => [...s, data.staff]);
       setNewName("");
-      setNewRole("");
+      setNewEmojis("");
     } else {
       alert("Failed to add staff");
     }
   }
 
-  async function handleUpdate(id: string, name: string, role: string) {
+  async function handleUpdate(id: string, name: string, emojis: string) {
     const res = await fetch(`/api/staff-roles/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), role: role.trim() }),
+      body: JSON.stringify({ name: name.trim(), emojis: emojis.trim() }),
     });
     if (res.ok) {
-      setStaff(s => s.map(st => st.id === id ? { ...st, name: name.trim(), role: role.trim() } : st));
+      setStaff(s => s.map(st => st.id === id ? { ...st, name: name.trim(), emojis: emojis.trim() } : st));
       setEditing(null);
     } else {
       alert("Failed to update staff");
@@ -104,14 +104,14 @@ export default function EmployeeRolesPage() {
             />
             <input
               type="text"
-              placeholder="Role"
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
+              placeholder="Emojis (e.g., 👗 ✨ 🏠)"
+              value={newEmojis}
+              onChange={(e) => setNewEmojis(e.target.value)}
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
             />
             <button
               onClick={handleAdd}
-              disabled={!newName.trim() || !newRole.trim()}
+              disabled={!newName.trim() || !newEmojis.trim()}
               className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
             >
               Add Staff
@@ -121,30 +121,30 @@ export default function EmployeeRolesPage() {
             <button
               onClick={() => {
                 const staffList = [
-                  { name: "Varuna - Spackeeper Kitty", role: "staff" },
-                  { name: "Saturday - stylist, space making, lead buyer", role: "staff" },
-                  { name: "Eliza - set design, B&A social media lead", role: "staff" },
-                  { name: "Sarah - production, mgmt, sales, styling", role: "staff" },
-                  { name: "Linda - product design, development, manufacturing, brand partnerships", role: "staff" },
-                  { name: "Robin - Website/App dev and staff management", role: "admin" },
-                  { name: "Swaggi - house mom, client massage, merch from china", role: "staff" },
-                  { name: "Charles - Afters booking/management", role: "staff" },
-                  { name: "Eli - Afters booking/management / Accounting", role: "staff" },
-                  { name: "Will - Afters DJ vibes", role: "staff" },
-                  { name: "Marvin - French Ally", role: "staff" },
-                  { name: "Addison - Styling, event support, house mgmt", role: "staff" },
-                  { name: "Archie - The Befores - getting ready party creation, booking, partnerships, styling", role: "staff" },
-                  { name: "Asa - Before & Afters Radio", role: "staff" },
-                  { name: "Jo - Model Citizen, Trial Client", role: "staff" },
-                  { name: "Vanessa - Special Events coordinator", role: "staff" },
-                  { name: "Solani - Tuesday Talent Show", role: "staff" },
+                  { name: "Varuna", emojis: "🌌 🐈‍⬛ ✨" },
+                  { name: "Saturday", emojis: "🛋️ 🛍️ 🧣" },
+                  { name: "Eliza", emojis: "🎬 🤳 📸" },
+                  { name: "Sarah", emojis: "🎬 💰 👠" },
+                  { name: "Linda", emojis: "🎨 🛠️ 📦" },
+                  { name: "Robin", emojis: "💻 📱 👑" },
+                  { name: "Swaggi", emojis: "🤱 💆‍♂️ 🇨🇳" },
+                  { name: "Charles", emojis: "🌙 🎟️ 📋" },
+                  { name: "Eli", emojis: "🌙 📊 💸" },
+                  { name: "Will", emojis: "🎧 🕺 🔊" },
+                  { name: "Marvin", emojis: "🇫🇷 🤝 🥖" },
+                  { name: "Addison", emojis: "👗 ✨ 🏠" },
+                  { name: "Archie", emojis: "🥂 📅 👔" },
+                  { name: "Asa", emojis: "📻 🎙️ 🎧" },
+                  { name: "Jo", emojis: "🚶‍♀️ 🧪 💎" },
+                  { name: "Vanessa", emojis: "🎊 🎈 🗓️" },
+                  { name: "Solani", emojis: "🎤 🌟 🗓️" },
                 ];
                 staffList.forEach(async (member) => {
                   try {
                     await fetch("/api/staff-roles", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name: member.name, role: member.role }),
+                      body: JSON.stringify({ name: member.name, emojis: member.emojis }),
                     });
                   } catch (e) {
                     console.error("Failed to seed staff:", member.name, e);
@@ -176,16 +176,16 @@ export default function EmployeeRolesPage() {
                     />
                     <input
                       type="text"
-                      defaultValue={member.role}
-                      id={`role-${member.id}`}
+                      defaultValue={member.emojis}
+                      id={`emojis-${member.id}`}
                       className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
                           const nameEl = document.getElementById(`name-${member.id}`) as HTMLInputElement;
-                          const roleEl = document.getElementById(`role-${member.id}`) as HTMLInputElement;
-                          handleUpdate(member.id, nameEl.value, roleEl.value);
+                          const emojisEl = document.getElementById(`emojis-${member.id}`) as HTMLInputElement;
+                          handleUpdate(member.id, nameEl.value, emojisEl.value);
                         }}
                         className="rounded-lg bg-black px-3 py-2 text-xs font-medium text-white hover:bg-gray-800"
                       >
@@ -203,7 +203,7 @@ export default function EmployeeRolesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">{member.name}</div>
-                      <div className="text-sm text-muted-foreground">{member.role}</div>
+                      <div className="text-lg">{member.emojis}</div>
                     </div>
                     <div className="flex gap-2">
                       <button

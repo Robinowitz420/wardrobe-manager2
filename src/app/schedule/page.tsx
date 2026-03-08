@@ -21,7 +21,7 @@ interface DaySchedule {
 interface StaffRole {
   id: string;
   name: string;
-  role: string;
+  emojis: string;
 }
 
 export default function PublicSchedulePage() {
@@ -94,15 +94,9 @@ export default function PublicSchedulePage() {
   const getColorStyle = (colorValue: string) => colorOptions.find(c => c.value === colorValue) || colorOptions[0];
   const getDaySlots = (date: Date | null) => date ? schedules[getDateKey(date)] || [] : [];
 
-  const roleToColor: Record<string, string> = {
-    admin: "red",
-    staff: "blue",
-  };
-
-  const getEmployeeColor = (employee: string) => {
+  const getEmployeeEmojis = (employee: string) => {
     const staffMember = staff.find((s) => s.name === employee);
-    const role = staffMember?.role || "";
-    return roleToColor[role] || "gray";
+    return staffMember?.emojis || "";
   };
   const formatTimeDisplay = (time: string) => {
     const [hours, minutes] = time.split(':');
@@ -152,13 +146,12 @@ export default function PublicSchedulePage() {
     console.log("[Schedule UI] Add timeslot clicked");
     const dateKey = getDateKey(selectedDate);
 
-    const derivedColor = getEmployeeColor(employeeName.trim());
     const newSlot: TimeSlot = {
       id: Date.now().toString(),
       startTime,
       endTime,
       employee: employeeName.trim(),
-      color: derivedColor,
+      color: "blue",
       details: details.trim() || undefined,
     };
     const newSchedules = { ...schedules, [dateKey]: [...(schedules[dateKey] || []), newSlot] };
@@ -171,11 +164,10 @@ export default function PublicSchedulePage() {
     if (!selectedDate || !editingSlot || !employeeName.trim()) return;
     console.log("[Schedule UI] Update timeslot clicked", editingSlot.id);
     const dateKey = getDateKey(selectedDate);
-    const derivedColor = getEmployeeColor(employeeName.trim());
     const newSchedules = {
       ...schedules,
       [dateKey]: schedules[dateKey]?.map(slot => slot.id === editingSlot.id 
-        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: derivedColor, details: details.trim() || undefined }
+        ? { ...slot, startTime, endTime, employee: employeeName.trim(), color: "blue", details: details.trim() || undefined }
         : slot) || [],
     };
     setSchedules(newSchedules);
@@ -388,7 +380,7 @@ export default function PublicSchedulePage() {
                                   />
                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/slot:block z-10 w-max max-w-[240px]">
                                     <div className="bg-black text-white text-xs rounded-lg px-2 py-1.5 shadow-lg">
-                                      <div className="font-semibold">{slot.employee}</div>
+                                      <div className="font-semibold">{slot.employee} {getEmployeeEmojis(slot.employee)}</div>
                                       <div>{formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}</div>
                                       {slot.details && <div className="mt-1 text-gray-300">{slot.details}</div>}
                                     </div>
@@ -439,7 +431,7 @@ export default function PublicSchedulePage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={`text-xs px-2 py-1 rounded ${colorStyle.bg} ${colorStyle.text}`}>
-                              {slot.employee}
+                              {slot.employee} {getEmployeeEmojis(slot.employee)}
                             </span>
                             {slot.details && (
                               <span className="text-xs text-muted-foreground" title={slot.details}>
@@ -501,14 +493,13 @@ export default function PublicSchedulePage() {
                           onChange={(e) => {
                             const name = e.target.value;
                             setEmployeeName(name);
-                            if (name) setSelectedColor(getEmployeeColor(name));
                           }}
                           className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
                         >
                           <option value="">Select employee</option>
                           {staff.map((s) => (
                             <option key={s.id} value={s.name}>
-                              {s.name}
+                              {s.name} {s.emojis}
                             </option>
                           ))}
                         </select>
