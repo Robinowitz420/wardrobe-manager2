@@ -131,15 +131,12 @@ export default function GarmentsIndexPage() {
               >
                 <div className="flex gap-4">
                   <div className="h-20 w-16 overflow-hidden rounded-xl border border-border bg-muted flex items-center justify-center">
-                    {primary ? (
+                    {primary?.src || primary?.dataUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img 
-                        src={primary.src ?? primary.dataUrl} 
+                        src={primary.src || primary.dataUrl} 
                         alt={g.name} 
                         className="h-full w-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
                       />
                     ) : (
                       <span className="text-xs text-muted-foreground">No photo</span>
