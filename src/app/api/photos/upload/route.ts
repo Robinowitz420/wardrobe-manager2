@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 import path from "node:path";
 
+import { getApps } from "firebase-admin/app";
 import { ClerkAuthzError, requireStaffOrAdmin } from "@/lib/clerk/auth";
+import { getAdminFirestore } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 
@@ -42,6 +44,12 @@ export async function POST(request: Request) {
 
   try {
     const saved: Array<{ src: string; fileName: string }> = [];
+
+    // Ensure Firebase Admin app is initialized before using Storage.
+    // (getAdminFirestore triggers initAdmin)
+    if (getApps().length === 0) {
+      getAdminFirestore();
+    }
 
     const { getStorage } = await import("firebase-admin/storage");
     const bucket = getStorage().bucket();
