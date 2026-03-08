@@ -185,6 +185,49 @@ export default function EmployeeRolesPage() {
             >
               Import Provided List
             </button>
+            <button
+              onClick={() => {
+                const emojiMap: Record<string, string> = {
+                  "Varuna": "🌌 🐈‍⬛ ✨",
+                  "Saturday": "🛋️ 🛍️ 🧣",
+                  "Eliza": "🎬 🤳 📸",
+                  "Sarah": "🎬 💰 👠",
+                  "Linda": "🎨 🛠️ 📦",
+                  "Robin": "💻 📱 👑",
+                  "Swaggi": "🤱 💆‍♂️ 🇨🇳",
+                  "Charles": "🌙 🎟️ 📋",
+                  "Eli": "🌙 📊 💸",
+                  "Will": "🎧 🕺 🔊",
+                  "Marvin": "🇫🇷 🤝 🥖",
+                  "Addison": "👗 ✨ 🏠",
+                  "Archie": "🥂 📅 👔",
+                  "Asa": "📻 🎙️ 🎧",
+                  "Jo": "🚶‍♀️ 🧪 💎",
+                  "Vanessa": "🎊 🎈 🗓️",
+                  "Solani": "🎤 🌟 🗓️",
+                };
+                let updated = 0;
+                staff.forEach(async (member) => {
+                  const emojis = emojiMap[member.name];
+                  if (emojis && !member.emojis) {
+                    try {
+                      await fetch(`/api/staff-roles/${member.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name: member.name, emojis, referralCode: member.referralCode }),
+                      });
+                      updated++;
+                    } catch (e) {
+                      console.error("Failed to backfill emojis:", member.name, e);
+                    }
+                  }
+                });
+                alert(`Backfilling emojis for ${updated} staff members... Refresh the page in a few seconds.`);
+              }}
+              className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Backfill Emojis
+            </button>
           </div>
         </div>
 
