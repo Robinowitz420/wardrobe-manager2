@@ -111,7 +111,7 @@ async function normalizeImageFile(file: File): Promise<File> {
 async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fileName: string }>> {
   const form = new FormData();
   for (const f of files) form.append("files", f);
-  const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
+  const res = await fetch("/api/photos/upload", { method: "POST", body: form });
   const json = (await res.json().catch(() => null)) as { files?: Array<{ src: string; fileName: string }>; error?: string; code?: string; bucket?: string } | null;
   if (!res.ok || !json || !Array.isArray(json.files)) {
     const base =
