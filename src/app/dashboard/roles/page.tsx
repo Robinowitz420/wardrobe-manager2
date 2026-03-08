@@ -247,7 +247,7 @@ export default function EmployeeRolesPage() {
                             {" • "}
                             <button
                               onClick={() => {
-                                const url = `https://wardrobe-manager2.vercel.app/?ref=${member.referralCode}`;
+                                const url = `https://wardrobe-manager2.vercel.app/r/${member.referralCode}`;
                                 navigator.clipboard.writeText(url);
                                 setCopiedId(member.id);
                                 setTimeout(() => setCopiedId(null), 2000);
