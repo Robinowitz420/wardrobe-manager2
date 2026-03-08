@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { authFetch } from "@/lib/firebase/auth-fetch";
 import { SAVE_ERROR_EVENT } from "@/lib/storage/garments";
 import type { GarmentPhoto } from "@/lib/validations/garment";
 
@@ -55,7 +54,7 @@ async function uploadFilesToDisk(files: File[]): Promise<Array<{ src: string; fi
   const form = new FormData();
   for (const f of files) form.append("files", f);
 
-  const res = await authFetch("/api/photos/upload", { method: "POST", body: form });
+  const res = await fetch("/api/photos/upload", { method: "POST", body: form });
   const json = (await res.json().catch(() => null)) as any;
   if (!res.ok || !json || !Array.isArray(json.files)) {
     const base =
