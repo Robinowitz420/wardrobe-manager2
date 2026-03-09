@@ -20,13 +20,25 @@ export default function EmployeeRolesPage() {
   const [newReferralCode, setNewReferralCode] = React.useState("");
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
+  function dedupeById(list: StaffRole[]): StaffRole[] {
+    const seen = new Set<string>();
+    const next: StaffRole[] = [];
+    for (const item of list) {
+      if (!item?.id) continue;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      next.push(item);
+    }
+    return next;
+  }
+
   // Load staff
   React.useEffect(() => {
     async function load() {
       try {
         const res = await fetch("/api/staff-roles");
         const data = await res.json();
-        setStaff(data.staff || []);
+        setStaff(dedupeById(data.staff || []));
       } catch (e) {
         console.error("Failed to load staff:", e);
       } finally {
@@ -49,7 +61,7 @@ export default function EmployeeRolesPage() {
     });
     if (res.ok) {
       const data = await res.json();
-      setStaff(s => [...s, data.staff]);
+      setStaff((s) => dedupeById([...s, data.staff]));
       setNewName("");
       setNewEmojis("");
       setNewReferralCode("");
