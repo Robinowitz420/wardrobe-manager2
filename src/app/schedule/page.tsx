@@ -157,6 +157,10 @@ export default function PublicSchedulePage() {
     return Array.from(byPerson.values()).sort((a, b) => normalizeNameKey(a.name).localeCompare(normalizeNameKey(b.name)));
   }
 
+  const canEdit = Boolean(user?.role === "staff" || user?.role === "admin");
+  const isLoggedIn = Boolean(user);
+  const [submitting, setSubmitting] = React.useState(false);
+
   const colorOptions = [
     { value: "blue", label: "Blue", bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-200" },
     { value: "green", label: "Green", bg: "bg-green-100", text: "text-green-800", bar: "bg-green-200" },
