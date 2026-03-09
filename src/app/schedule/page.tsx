@@ -85,7 +85,7 @@ export default function PublicSchedulePage() {
         const res = await fetch("/api/staff-roles");
         if (!res.ok) return;
         const data = await res.json();
-        setStaff(data.staff || []);
+        setStaff(mergeDuplicates(data.staff || []));
       } catch (e) {
         console.error("Failed to fetch staff:", e);
       }
@@ -94,9 +94,68 @@ export default function PublicSchedulePage() {
     fetchStaff();
   }, []);
 
-  const canEdit = Boolean(user?.role === "staff" || user?.role === "admin");
-  const isLoggedIn = Boolean(user);
-  const [submitting, setSubmitting] = React.useState(false);
+  function normalizeNameKey(name: string): string {
+    return name.trim().toLowerCase();
+  }
+
+  function normalizePersonKey(name: string): string {
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    const base = trimmed.split("-")[0]?.trim() || trimmed;
+    return base.toLowerCase();
+  }
+
+  function combineStaff(a: StaffRole, b: StaffRole): StaffRole {
+    const pickString = (x: string, y: string) => (x && x.trim() ? x : y);
+    const pickLatestIso = (x: string, y: string) => {
+      const tx = Date.parse(x);
+      const ty = Date.parse(y);
+      if (!Number.isFinite(tx)) return y;
+      if (!Number.isFinite(ty)) return x;
+      return tx >= ty ? x : y;
+    };
+
+    const cleanName = (n: string) => n.trim();
+    const preferTitleFormat = (x: string, y: string) => {
+      const cx = cleanName(x);
+      const cy = cleanName(y);
+      if (!cx) return cy;
+      if (!cy) return cx;
+      // Prefer the name with title (contains " - ")
+      const hasTitleX = cx.includes(" - ");
+      const hasTitleY = cy.includes(" - ");
+      if (hasTitleX && !hasTitleY) return cx;
+      if (hasTitleY && !hasTitleX) return cy;
+      // If both have titles or neither do, prefer the first one
+      return cx;
+    };
+
+    return {
+      // Keep the first id as canonical for UI actions.
+      id: a.id,
+      name: preferTitleFormat(a.name, b.name),
+      emojis: pickString(a.emojis, b.emojis),
+      referralCode: pickString(a.referralCode, b.referralCode),
+      createdAt: pickLatestIso(a.createdAt, b.createdAt),
+      updatedAt: pickLatestIso(a.updatedAt, b.updatedAt),
+    };
+  }
+
+  function mergeDuplicates(list: StaffRole[]): StaffRole[] {
+    // Group by person key (base name before any " - description") and combine fields into one.
+    const byPerson = new Map<string, StaffRole>();
+    for (const item of list) {
+      if (!item?.name) continue;
+      const key = normalizePersonKey(item.name);
+      const existing = byPerson.get(key);
+      if (!existing) {
+        byPerson.set(key, item);
+      } else {
+        byPerson.set(key, combineStaff(existing, item));
+      }
+    }
+    // Stable sort for readability
+    return Array.from(byPerson.values()).sort((a, b) => normalizeNameKey(a.name).localeCompare(normalizeNameKey(b.name)));
+  }
 
   const colorOptions = [
     { value: "blue", label: "Blue", bg: "bg-blue-100", text: "text-blue-800", bar: "bg-blue-200" },
@@ -607,7 +666,7 @@ export default function PublicSchedulePage() {
                     <p className="text-sm text-muted-foreground mb-3">
                       Staff will review and add your hours to the schedule.
                     </p>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
                         <label className="block text-sm font-medium mb-1">Start Time</label>
                         <input
@@ -641,16 +700,6 @@ export default function PublicSchedulePage() {
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Your Name</label>
-                        <input
-                          type="text"
-                          value={user?.email || ""}
-                          readOnly
-                          className="h-10 w-full rounded-lg border border-border bg-muted px-3 text-sm"
-                        />
-                      </div>
-                    </div>
                     <div className="mt-3">
                       <label className="block text-sm font-medium mb-1">Details (optional)</label>
                       <textarea
