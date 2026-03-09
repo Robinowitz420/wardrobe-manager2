@@ -20,16 +20,48 @@ export default function EmployeeRolesPage() {
   const [newReferralCode, setNewReferralCode] = React.useState("");
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
-  function dedupeById(list: StaffRole[]): StaffRole[] {
-    const seen = new Set<string>();
-    const next: StaffRole[] = [];
+  function dedupeStaff(list: StaffRole[]): StaffRole[] {
+    const byKey = new Map<string, StaffRole>();
     for (const item of list) {
-      if (!item?.id) continue;
-      if (seen.has(item.id)) continue;
-      seen.add(item.id);
-      next.push(item);
+      if (!item) continue;
+
+      const nameKey = typeof item.name === "string" ? item.name.trim().toLowerCase() : "";
+      const key = item.id ? `id:${item.id}` : nameKey ? `name:${nameKey}` : "";
+      if (!key) continue;
+
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, item);
+        continue;
+      }
+
+      const score = (x: StaffRole) => {
+        let s = 0;
+        if (typeof x.emojis === "string" && x.emojis.trim()) s += 10;
+        if (typeof x.referralCode === "string" && x.referralCode.trim()) s += 5;
+        if (typeof x.updatedAt === "string" && x.updatedAt.trim()) s += 1;
+        return s;
+      };
+
+      byKey.set(key, score(item) >= score(existing) ? item : existing);
     }
-    return next;
+
+    // Second pass: also collapse duplicates by name across differing ids.
+    const byName = new Map<string, StaffRole>();
+    for (const item of byKey.values()) {
+      const nameKey = typeof item.name === "string" ? item.name.trim().toLowerCase() : "";
+      if (!nameKey) continue;
+      const existing = byName.get(nameKey);
+      if (!existing) {
+        byName.set(nameKey, item);
+        continue;
+      }
+      const hasMoreInfo = (x: StaffRole) =>
+        (typeof x.emojis === "string" && x.emojis.trim()) || (typeof x.referralCode === "string" && x.referralCode.trim());
+      byName.set(nameKey, hasMoreInfo(item) && !hasMoreInfo(existing) ? item : existing);
+    }
+
+    return Array.from(byName.values());
   }
 
   // Load staff
@@ -38,7 +70,7 @@ export default function EmployeeRolesPage() {
       try {
         const res = await fetch("/api/staff-roles");
         const data = await res.json();
-        setStaff(dedupeById(data.staff || []));
+        setStaff(dedupeStaff(data.staff || []));
       } catch (e) {
         console.error("Failed to load staff:", e);
       } finally {
@@ -61,7 +93,7 @@ export default function EmployeeRolesPage() {
     });
     if (res.ok) {
       const data = await res.json();
-      setStaff((s) => dedupeById([...s, data.staff]));
+      setStaff((s) => dedupeStaff([...s, data.staff]));
       setNewName("");
       setNewEmojis("");
       setNewReferralCode("");
