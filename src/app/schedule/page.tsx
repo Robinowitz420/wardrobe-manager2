@@ -700,6 +700,7 @@ export default function PublicSchedulePage() {
                           ))}
                         </select>
                       </div>
+                    </div>
                     <div className="mt-3">
                       <label className="block text-sm font-medium mb-1">Details (optional)</label>
                       <textarea
