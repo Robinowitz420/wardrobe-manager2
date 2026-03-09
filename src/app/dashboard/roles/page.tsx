@@ -41,22 +41,24 @@ export default function EmployeeRolesPage() {
     };
 
     const cleanName = (n: string) => n.trim();
-    const preferShortName = (x: string, y: string) => {
+    const preferTitleFormat = (x: string, y: string) => {
       const cx = cleanName(x);
       const cy = cleanName(y);
       if (!cx) return cy;
       if (!cy) return cx;
-      // Prefer the "base" name (no description after a dash)
-      const bx = cx.split("-")[0]?.trim() || cx;
-      const by = cy.split("-")[0]?.trim() || cy;
-      if (bx.length !== by.length) return bx.length <= by.length ? bx : by;
-      return bx;
+      // Prefer the name with title (contains " - ")
+      const hasTitleX = cx.includes(" - ");
+      const hasTitleY = cy.includes(" - ");
+      if (hasTitleX && !hasTitleY) return cx;
+      if (hasTitleY && !hasTitleX) return cy;
+      // If both have titles or neither do, prefer the first one
+      return cx;
     };
 
     return {
       // Keep the first id as canonical for UI actions.
       id: a.id,
-      name: preferShortName(a.name, b.name),
+      name: preferTitleFormat(a.name, b.name),
       emojis: pickString(a.emojis, b.emojis),
       referralCode: pickString(a.referralCode, b.referralCode),
       createdAt: pickLatestIso(a.createdAt, b.createdAt),
