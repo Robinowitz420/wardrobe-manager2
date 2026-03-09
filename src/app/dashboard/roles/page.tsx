@@ -24,6 +24,12 @@ export default function EmployeeRolesPage() {
     return name.trim().toLowerCase();
   }
 
+  function normalizePersonKey(name: string): string {
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    const base = trimmed.split("-")[0]?.trim() || trimmed;
+    return base.toLowerCase();
+  }
+
   function combineStaff(a: StaffRole, b: StaffRole): StaffRole {
     const pickString = (x: string, y: string) => (x && x.trim() ? x : y);
     const pickLatestIso = (x: string, y: string) => {
@@ -34,10 +40,23 @@ export default function EmployeeRolesPage() {
       return tx >= ty ? x : y;
     };
 
+    const cleanName = (n: string) => n.trim();
+    const preferShortName = (x: string, y: string) => {
+      const cx = cleanName(x);
+      const cy = cleanName(y);
+      if (!cx) return cy;
+      if (!cy) return cx;
+      // Prefer the "base" name (no description after a dash)
+      const bx = cx.split("-")[0]?.trim() || cx;
+      const by = cy.split("-")[0]?.trim() || cy;
+      if (bx.length !== by.length) return bx.length <= by.length ? bx : by;
+      return bx;
+    };
+
     return {
       // Keep the first id as canonical for UI actions.
       id: a.id,
-      name: pickString(a.name, b.name),
+      name: preferShortName(a.name, b.name),
       emojis: pickString(a.emojis, b.emojis),
       referralCode: pickString(a.referralCode, b.referralCode),
       createdAt: pickLatestIso(a.createdAt, b.createdAt),
@@ -46,19 +65,20 @@ export default function EmployeeRolesPage() {
   }
 
   function mergeDuplicates(list: StaffRole[]): StaffRole[] {
-    // Group by normalized name and combine fields into one.
-    const byName = new Map<string, StaffRole>();
+    // Group by person key (base name before any " - description") and combine fields into one.
+    const byPerson = new Map<string, StaffRole>();
     for (const item of list) {
       if (!item?.name) continue;
-      const key = normalizeNameKey(item.name);
-      const existing = byName.get(key);
+      const key = normalizePersonKey(item.name);
+      const existing = byPerson.get(key);
       if (!existing) {
-        byName.set(key, item);
+        byPerson.set(key, item);
       } else {
-        byName.set(key, combineStaff(existing, item));
+        byPerson.set(key, combineStaff(existing, item));
       }
     }
-    return Array.from(byName.values());
+    // Stable sort for readability
+    return Array.from(byPerson.values()).sort((a, b) => normalizeNameKey(a.name).localeCompare(normalizeNameKey(b.name)));
   }
 
   // Load staff
