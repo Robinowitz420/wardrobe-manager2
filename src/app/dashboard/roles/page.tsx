@@ -20,47 +20,44 @@ export default function EmployeeRolesPage() {
   const [newReferralCode, setNewReferralCode] = React.useState("");
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
-  function dedupeStaff(list: StaffRole[]): StaffRole[] {
-    const byKey = new Map<string, StaffRole>();
-    for (const item of list) {
-      if (!item) continue;
+  function normalizeNameKey(name: string): string {
+    return name.trim().toLowerCase();
+  }
 
-      const nameKey = typeof item.name === "string" ? item.name.trim().toLowerCase() : "";
-      const key = item.id ? `id:${item.id}` : nameKey ? `name:${nameKey}` : "";
-      if (!key) continue;
+  function combineStaff(a: StaffRole, b: StaffRole): StaffRole {
+    const pickString = (x: string, y: string) => (x && x.trim() ? x : y);
+    const pickLatestIso = (x: string, y: string) => {
+      const tx = Date.parse(x);
+      const ty = Date.parse(y);
+      if (!Number.isFinite(tx)) return y;
+      if (!Number.isFinite(ty)) return x;
+      return tx >= ty ? x : y;
+    };
 
-      const existing = byKey.get(key);
-      if (!existing) {
-        byKey.set(key, item);
-        continue;
-      }
+    return {
+      // Keep the first id as canonical for UI actions.
+      id: a.id,
+      name: pickString(a.name, b.name),
+      emojis: pickString(a.emojis, b.emojis),
+      referralCode: pickString(a.referralCode, b.referralCode),
+      createdAt: pickLatestIso(a.createdAt, b.createdAt),
+      updatedAt: pickLatestIso(a.updatedAt, b.updatedAt),
+    };
+  }
 
-      const score = (x: StaffRole) => {
-        let s = 0;
-        if (typeof x.emojis === "string" && x.emojis.trim()) s += 10;
-        if (typeof x.referralCode === "string" && x.referralCode.trim()) s += 5;
-        if (typeof x.updatedAt === "string" && x.updatedAt.trim()) s += 1;
-        return s;
-      };
-
-      byKey.set(key, score(item) >= score(existing) ? item : existing);
-    }
-
-    // Second pass: also collapse duplicates by name across differing ids.
+  function mergeDuplicates(list: StaffRole[]): StaffRole[] {
+    // Group by normalized name and combine fields into one.
     const byName = new Map<string, StaffRole>();
-    for (const item of byKey.values()) {
-      const nameKey = typeof item.name === "string" ? item.name.trim().toLowerCase() : "";
-      if (!nameKey) continue;
-      const existing = byName.get(nameKey);
+    for (const item of list) {
+      if (!item?.name) continue;
+      const key = normalizeNameKey(item.name);
+      const existing = byName.get(key);
       if (!existing) {
-        byName.set(nameKey, item);
-        continue;
+        byName.set(key, item);
+      } else {
+        byName.set(key, combineStaff(existing, item));
       }
-      const hasMoreInfo = (x: StaffRole) =>
-        (typeof x.emojis === "string" && x.emojis.trim()) || (typeof x.referralCode === "string" && x.referralCode.trim());
-      byName.set(nameKey, hasMoreInfo(item) && !hasMoreInfo(existing) ? item : existing);
     }
-
     return Array.from(byName.values());
   }
 
@@ -70,7 +67,7 @@ export default function EmployeeRolesPage() {
       try {
         const res = await fetch("/api/staff-roles");
         const data = await res.json();
-        setStaff(dedupeStaff(data.staff || []));
+        setStaff(mergeDuplicates(data.staff || []));
       } catch (e) {
         console.error("Failed to load staff:", e);
       } finally {
@@ -93,7 +90,7 @@ export default function EmployeeRolesPage() {
     });
     if (res.ok) {
       const data = await res.json();
-      setStaff((s) => dedupeStaff([...s, data.staff]));
+      setStaff((s) => mergeDuplicates([...s, data.staff]));
       setNewName("");
       setNewEmojis("");
       setNewReferralCode("");
