@@ -7,15 +7,14 @@ const VALID_TIERS = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
 
 export async function GET(
   request: Request,
-  ctx: { params: Promise<{ code: string }> },
+  ctx: { params: Promise<{ code: string; tier: string }> },
 ) {
-  const { code } = await ctx.params;
+  const { code, tier } = await ctx.params;
   const ref = (code || "").toUpperCase().trim();
-  
-  // Check for tier in query params
-  const url = new URL(request.url);
-  const tierParam = url.searchParams.get("tier") || "";
-  const validTier = VALID_TIERS.find(t => t.toLowerCase() === tierParam.toLowerCase()) || null;
+  const tierName = (tier || "").trim();
+
+  // Validate tier
+  const validTier = VALID_TIERS.find(t => t.toLowerCase() === tierName.toLowerCase()) || "Eeeehs";
 
   if (!ref) {
     return NextResponse.redirect(new URL("https://beforeandafters.vercel.app/memberships"));
@@ -49,11 +48,8 @@ export async function GET(
     // Still redirect even if tracking fails
   }
 
-  // Build redirect URL with tier if provided
-  let redirectUrl = `https://beforeandafters.vercel.app/memberships?ref=${encodeURIComponent(ref)}`;
-  if (validTier) {
-    redirectUrl += `&tier=${encodeURIComponent(validTier)}`;
-  }
-
-  return NextResponse.redirect(new URL(redirectUrl));
+  // Redirect with both ref and tier
+  return NextResponse.redirect(
+    new URL(`https://beforeandafters.vercel.app/memberships?ref=${encodeURIComponent(ref)}&tier=${encodeURIComponent(validTier)}`),
+  );
 }
