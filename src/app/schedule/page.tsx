@@ -237,6 +237,52 @@ export default function EventsCalendarPage() {
     return event.signups?.some((s) => s.userId === user?.id);
   };
 
+  const exportToGoogleCalendar = () => {
+    // Generate ICS content for all events
+    const icsEvents = events.map((event) => {
+      const startDate = new Date(event.date + "T" + (event.startTime || "00:00"));
+      const endDate = new Date(event.date + "T" + (event.endTime || "23:59"));
+      
+      const formatICSDate = (d: Date) => {
+        return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+      };
+
+      const signupNames = event.signups?.map(s => s.name).join(", ") || "";
+      const description = (event.description || "") + (signupNames ? `\n\nSigned up: ${signupNames}` : "");
+
+      return [
+        "BEGIN:VEVENT",
+        `DTSTART:${formatICSDate(startDate)}`,
+        `DTEND:${formatICSDate(endDate)}`,
+        `SUMMARY:${event.title}`,
+        `DESCRIPTION:${description.replace(/\n/g, "\\n")}`,
+        event.location ? `LOCATION:${event.location}` : "",
+        "END:VEVENT",
+      ].filter(Boolean).join("\r\n");
+    });
+
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Before & Afters//Events Calendar//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      ...icsEvents,
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    // Download the ICS file
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "before-afters-events.ics";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const days = getDaysInMonth(currentDate);
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -327,12 +373,17 @@ export default function EventsCalendarPage() {
                         {dayEvents.slice(0, 3).map((event) => (
                           <div
                             key={event.id}
-                            className="rounded bg-blue-100 text-blue-800 px-2 py-1 text-xs truncate cursor-pointer hover:bg-blue-200 transition"
+                            className="rounded bg-blue-100 text-blue-800 px-2 py-1 text-xs cursor-pointer hover:bg-blue-200 transition"
                             onMouseEnter={(e) => handleMouseEnter(e, event)}
                             onMouseLeave={handleMouseLeave}
                             onClick={() => handleEventClick(event)}
                           >
-                            {event.title}
+                            <div className="truncate font-medium">{event.title}</div>
+                            {event.signups && event.signups.length > 0 && (
+                              <div className="truncate text-blue-600 text-[10px] mt-0.5">
+                                👤 {event.signups.map(s => s.name).join(', ')}
+                              </div>
+                            )}
                           </div>
                         ))}
                         {dayEvents.length > 3 && (
@@ -370,6 +421,11 @@ export default function EventsCalendarPage() {
               {hoveredEvent.signups?.length || 0}
               {hoveredEvent.capacity ? ` / ${hoveredEvent.capacity}` : ""} signed up
             </div>
+            {hoveredEvent.signups && hoveredEvent.signups.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-1">
+                👤 {hoveredEvent.signups.map(s => s.name).join(', ')}
+              </div>
+            )}
             {hoveredEvent.description && (
               <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
                 {hoveredEvent.description}
@@ -586,6 +642,19 @@ export default function EventsCalendarPage() {
             </div>
           </div>
         )}
+
+        {/* Export to Google Calendar */}
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={exportToGoogleCalendar}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            Export to Google Calendar
+          </button>
+        </div>
       </div>
     </div>
   );
