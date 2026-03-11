@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+const TIERS = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"] as const;
+
 interface StaffRole {
   id: string;
   name: string;
@@ -348,23 +350,31 @@ export default function EmployeeRolesPage() {
                       <div className="font-medium">{member.name} <span className="text-lg">{member.emojis}</span></div>
                       <div className="text-sm text-muted-foreground mt-1">
                         Ref Code: <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{member.referralCode || "—"}</span>
-                        {member.referralCode && (
-                          <>
-                            {" • "}
-                            <button
-                              onClick={() => {
-                                const url = `https://wardrobe-manager2.vercel.app/r/${member.referralCode}`;
-                                navigator.clipboard.writeText(url);
-                                setCopiedId(member.id);
-                                setTimeout(() => setCopiedId(null), 2000);
-                              }}
-                              className="text-blue-600 hover:underline text-xs"
-                            >
-                              {copiedId === member.id ? "Copied!" : "Copy URL"}
-                            </button>
-                          </>
-                        )}
                       </div>
+                      {member.referralCode && (
+                        <div className="mt-2 space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">Referral URLs:</div>
+                          {TIERS.map((tier) => (
+                            <div key={tier} className="flex items-center gap-2 text-xs">
+                              <span className="w-16 text-muted-foreground">{tier}:</span>
+                              <code className="flex-1 truncate rounded bg-muted px-1.5 py-0.5 font-mono">
+                                wardrobe-manager2.vercel.app/r/{member.referralCode}/{tier}
+                              </code>
+                              <button
+                                onClick={() => {
+                                  const url = `https://wardrobe-manager2.vercel.app/r/${member.referralCode}/${tier}`;
+                                  navigator.clipboard.writeText(url);
+                                  setCopiedId(`${member.id}-${tier}`);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                                className="text-blue-600 hover:underline whitespace-nowrap"
+                              >
+                                {copiedId === `${member.id}-${tier}` ? "Copied!" : "Copy"}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
