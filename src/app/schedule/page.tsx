@@ -360,7 +360,7 @@ export default function EventsCalendarPage() {
               return (
                 <div
                   key={index}
-                  className={`min-h-[100px] border-b border-r border-border p-2 ${
+                  className={`min-h-[140px] border-b border-r border-border p-2 ${
                     day ? "bg-background cursor-pointer hover:bg-muted/30" : "bg-muted/20"
                   }`}
                 >
@@ -370,7 +370,7 @@ export default function EventsCalendarPage() {
                         {day.getDate()}
                       </div>
                       <div className="space-y-1">
-                        {dayEvents.slice(0, 3).map((event) => (
+                        {dayEvents.map((event) => (
                           <div
                             key={event.id}
                             className="rounded bg-blue-100 text-blue-800 px-2 py-1 text-xs cursor-pointer hover:bg-blue-200 transition"
@@ -386,11 +386,6 @@ export default function EventsCalendarPage() {
                             )}
                           </div>
                         ))}
-                        {dayEvents.length > 3 && (
-                          <div className="text-xs text-muted-foreground">
-                            +{dayEvents.length - 3} more
-                          </div>
-                        )}
                       </div>
                     </>
                   )}
