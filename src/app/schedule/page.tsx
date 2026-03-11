@@ -15,6 +15,7 @@ interface Event {
     userId: string;
     name: string;
     email?: string;
+    phone?: string;
     signedUpAt: string;
   }>;
   createdAt: string;
@@ -30,6 +31,8 @@ export default function EventsCalendarPage() {
   const [hoveredEvent, setHoveredEvent] = React.useState<Event | null>(null);
   const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 });
   const [showCreateForm, setShowCreateForm] = React.useState(false);
+  const [showSignupForm, setShowSignupForm] = React.useState(false);
+  const [signupData, setSignupData] = React.useState({ name: "", email: "", phone: "" });
   const [submitting, setSubmitting] = React.useState(false);
 
   // Form state for creating events
@@ -128,17 +131,28 @@ export default function EventsCalendarPage() {
 
   const handleSignup = async (eventId: string) => {
     if (!isLoggedIn) return;
+    if (!signupData.name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "signup", name: user?.email || "Anonymous" }),
+        body: JSON.stringify({ 
+          action: "signup", 
+          name: signupData.name.trim(),
+          email: signupData.email.trim() || null,
+          phone: signupData.phone.trim() || null,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
         setEvents((prev) => prev.map((e) => (e.id === eventId ? data.event : e)));
         setSelectedEvent(data.event);
+        setShowSignupForm(false);
+        setSignupData({ name: "", email: "", phone: "" });
       } else {
         alert(data.error || "Failed to sign up");
       }
@@ -472,10 +486,12 @@ export default function EventsCalendarPage() {
                   {selectedEvent.capacity ? ` / ${selectedEvent.capacity}` : ""})
                 </div>
                 {selectedEvent.signups && selectedEvent.signups.length > 0 ? (
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
                     {selectedEvent.signups.map((signup, index) => (
-                      <div key={index} className="text-sm text-muted-foreground">
-                        • {signup.name}
+                      <div key={index} className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2">
+                        <div className="font-medium text-foreground">{signup.name}</div>
+                        {signup.email && <div className="text-xs">📧 {signup.email}</div>}
+                        {signup.phone && <div className="text-xs">📱 {signup.phone}</div>}
                       </div>
                     ))}
                   </div>
@@ -485,29 +501,77 @@ export default function EventsCalendarPage() {
               </div>
 
               {/* Actions */}
-              <div className="mt-4 pt-4 border-t border-border flex gap-2">
+              <div className="mt-4 pt-4 border-t border-border">
                 {isLoggedIn ? (
                   isUserSignedUp(selectedEvent) ? (
                     <button
                       onClick={() => handleUnsignup(selectedEvent.id)}
                       disabled={submitting}
-                      className="flex-1 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
+                      className="w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition disabled:opacity-50"
                     >
                       {submitting ? "Removing..." : "Remove My Signup"}
                     </button>
+                  ) : showSignupForm ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Your Name *</label>
+                        <input
+                          type="text"
+                          value={signupData.name}
+                          onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Enter your name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={signupData.email}
+                          onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="your@email.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          value={signupData.phone}
+                          onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Your phone number"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSignup(selectedEvent.id)}
+                          disabled={submitting || !signupData.name.trim()}
+                          className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                        >
+                          {submitting ? "Signing up..." : "Confirm Signup"}
+                        </button>
+                        <button
+                          onClick={() => setShowSignupForm(false)}
+                          className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <button
-                      onClick={() => handleSignup(selectedEvent.id)}
-                      disabled={submitting || Boolean(selectedEvent.capacity && selectedEvent.signups?.length >= selectedEvent.capacity)}
-                      className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
+                      onClick={() => setShowSignupForm(true)}
+                      disabled={Boolean(selectedEvent.capacity && selectedEvent.signups?.length >= selectedEvent.capacity)}
+                      className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
                     >
-                      {submitting ? "Signing up..." : "Sign Me Up"}
+                      Sign Me Up
                     </button>
                   )
                 ) : (
                   <button
                     onClick={() => window.location.href = "/login"}
-                    className="flex-1 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                    className="w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
                   >
                     Log in to Sign Up
                   </button>
@@ -515,9 +579,9 @@ export default function EventsCalendarPage() {
                 {canCreate && (
                   <button
                     onClick={() => handleDeleteEvent(selectedEvent.id)}
-                    className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                    className="w-full mt-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition"
                   >
-                    Delete
+                    Delete Event
                   </button>
                 )}
               </div>

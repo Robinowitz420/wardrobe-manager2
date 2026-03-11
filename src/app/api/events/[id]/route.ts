@@ -55,7 +55,7 @@ export async function PATCH(
 ) {
   const { id } = await ctx.params;
   const body = await request.json();
-  const { action, name, email, userId: signupUserId, ...eventFields } = body;
+  const { action, name, email, phone, userId: signupUserId, ...eventFields } = body;
 
   const db = getAdminFirestore();
   const doc = await db.collection("events").doc(id).get();
@@ -89,6 +89,7 @@ export async function PATCH(
         userId,
         name: signupName,
         email: email || null,
+        phone: phone || null,
         signedUpAt: new Date().toISOString(),
       };
 
