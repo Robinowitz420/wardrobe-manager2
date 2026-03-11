@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
-import { ClerkAuthzError, requireStaffOrAdmin, requireSignedInUser } from "@/lib/clerk/auth";
+import { ClerkAuthzError, requireStaffOrAdmin, requireSignedInUser, requireAdmin } from "@/lib/clerk/auth";
 
 export const runtime = "nodejs";
 
@@ -114,6 +114,29 @@ export async function PATCH(
       
       const filteredSignups = (event.signups || []).filter(
         (s: any) => s.userId !== userId && s.email !== email
+      );
+
+      await db.collection("events").doc(id).update({
+        signups: filteredSignups,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const updated = await db.collection("events").doc(id).get();
+      return NextResponse.json({ event: { id: updated.id, ...updated.data() } });
+    } catch (e) {
+      if (e instanceof ClerkAuthzError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  if (action === "removeSignup") {
+    try {
+      await requireAdmin();
+      
+      const filteredSignups = (event.signups || []).filter(
+        (s: any) => s.userId !== signupUserId
       );
 
       await db.collection("events").doc(id).update({

@@ -36,6 +36,19 @@ export async function requireStaffOrAdmin() {
   return { user, role };
 }
 
+export async function requireAdmin() {
+  const user = await requireClerkUser();
+  const email = user.emailAddresses?.[0]?.emailAddress?.toLowerCase();
+  if (email !== "robinrussellfrench@gmail.com") {
+    throw new ClerkAuthzError("Forbidden - Admin only", 403);
+  }
+  return { user, email };
+}
+
+export function isAdminEmail(email: string | undefined): boolean {
+  return email?.toLowerCase() === "robinrussellfrench@gmail.com";
+}
+
 export async function requireSignedInUser() {
   const { userId, sessionClaims } = await auth();
   if (!userId) throw new ClerkAuthzError("Unauthorized", 401);

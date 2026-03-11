@@ -46,8 +46,17 @@ export default function EventsCalendarPage() {
     capacity: "",
   });
 
-  const canCreate = user?.role === "staff" || user?.role === "admin";
+  // Derived state - must be after user state
+  const isAdmin = user?.isAdmin === true;
   const isLoggedIn = Boolean(user);
+  const userEmail = user?.email || "";
+
+  // Auto-populate email when user is loaded
+  React.useEffect(() => {
+    if (userEmail) {
+      setSignupData(prev => ({ ...prev, email: userEmail }));
+    }
+  }, [userEmail]);
 
   // Fetch user auth status
   React.useEffect(() => {
@@ -135,6 +144,10 @@ export default function EventsCalendarPage() {
       alert("Please enter your name");
       return;
     }
+    if (!signupData.phone.trim()) {
+      alert("Please enter your phone number");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/events/${eventId}`, {
@@ -182,6 +195,31 @@ export default function EventsCalendarPage() {
       }
     } catch (e) {
       console.error("Unsignup failed:", e);
+      alert("Failed to remove signup");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRemoveSignup = async (eventId: string, signupUserId: string) => {
+    if (!isAdmin) return;
+    if (!confirm("Remove this person from the event?")) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "removeSignup", signupUserId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEvents((prev) => prev.map((e) => (e.id === eventId ? data.event : e)));
+        setSelectedEvent(data.event);
+      } else {
+        alert(data.error || "Failed to remove signup");
+      }
+    } catch (e) {
+      console.error("Remove signup failed:", e);
       alert("Failed to remove signup");
     } finally {
       setSubmitting(false);
@@ -324,7 +362,7 @@ export default function EventsCalendarPage() {
                 View upcoming events and sign up to participate
               </p>
             </div>
-            {canCreate && (
+            {isAdmin && (
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
@@ -488,10 +526,20 @@ export default function EventsCalendarPage() {
                 {selectedEvent.signups && selectedEvent.signups.length > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {selectedEvent.signups.map((signup, index) => (
-                      <div key={index} className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2">
-                        <div className="font-medium text-foreground">{signup.name}</div>
-                        {signup.email && <div className="text-xs">📧 {signup.email}</div>}
-                        {signup.phone && <div className="text-xs">📱 {signup.phone}</div>}
+                      <div key={index} className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-2 flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-foreground">{signup.name}</div>
+                          {signup.email && <div className="text-xs">📧 {signup.email}</div>}
+                          {signup.phone && <div className="text-xs">📱 {signup.phone}</div>}
+                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleRemoveSignup(selectedEvent.id, signup.userId)}
+                            className="text-xs text-red-600 hover:text-red-800 hover:underline ml-2"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -502,7 +550,15 @@ export default function EventsCalendarPage() {
 
               {/* Actions */}
               <div className="mt-4 pt-4 border-t border-border">
-                {isLoggedIn ? (
+                {isAdmin ? (
+                  // Admin only sees Delete Event button
+                  <button
+                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    className="w-full rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                  >
+                    Delete Event
+                  </button>
+                ) : isLoggedIn ? (
                   isUserSignedUp(selectedEvent) ? (
                     <button
                       onClick={() => handleUnsignup(selectedEvent.id)}
@@ -528,13 +584,12 @@ export default function EventsCalendarPage() {
                         <input
                           type="email"
                           value={signupData.email}
-                          onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                          placeholder="your@email.com"
+                          readOnly
+                          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Phone</label>
+                        <label className="block text-sm font-medium mb-1">Phone *</label>
                         <input
                           type="tel"
                           value={signupData.phone}
@@ -546,7 +601,7 @@ export default function EventsCalendarPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleSignup(selectedEvent.id)}
-                          disabled={submitting || !signupData.name.trim()}
+                          disabled={submitting || !signupData.name.trim() || !signupData.phone.trim()}
                           className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition disabled:opacity-50"
                         >
                           {submitting ? "Signing up..." : "Confirm Signup"}
@@ -574,14 +629,6 @@ export default function EventsCalendarPage() {
                     className="w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
                   >
                     Log in to Sign Up
-                  </button>
-                )}
-                {canCreate && (
-                  <button
-                    onClick={() => handleDeleteEvent(selectedEvent.id)}
-                    className="w-full mt-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition"
-                  >
-                    Delete Event
                   </button>
                 )}
               </div>
