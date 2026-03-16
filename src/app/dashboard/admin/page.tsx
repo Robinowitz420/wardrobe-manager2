@@ -27,6 +27,21 @@ export default function AdminPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <div className="text-lg font-semibold">Membership Overrides</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Manually set membership tier and dates for cash payments.
+            </div>
+            <div className="mt-4">
+              <Link
+                href="/dashboard/admin/memberships"
+                className="inline-flex rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                Open Memberships
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-muted/30 p-4">
             <div className="text-lg font-semibold">System Health</div>
             <div className="mt-1 text-sm text-muted-foreground">Firestore status, API checks, and logs.</div>
             <div className="mt-4">
