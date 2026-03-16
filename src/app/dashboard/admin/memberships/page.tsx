@@ -96,14 +96,18 @@ export default function AdminMembershipsPage() {
     [membersCursor],
   );
 
-  const lookup = async (emailOverride?: string) => {
+  const lookup = async (emailOverride?: string, clerkUserIdOverride?: string) => {
     const effectiveEmail = (emailOverride ?? email).trim();
-    if (!effectiveEmail) return;
+    const effectiveClerkUserId = (clerkUserIdOverride ?? "").trim();
+    if (!effectiveEmail && !effectiveClerkUserId) return;
     setLoading(true);
     setError(null);
     setUser(null);
     try {
-      const res = await fetch(`/api/admin/memberships?email=${encodeURIComponent(effectiveEmail)}`, { cache: "no-store" });
+      const qs = new URLSearchParams();
+      if (effectiveEmail) qs.set("email", effectiveEmail);
+      if (effectiveClerkUserId) qs.set("clerkUserId", effectiveClerkUserId);
+      const res = await fetch(`/api/admin/memberships?${qs.toString()}`, { cache: "no-store" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError((json as any)?.error || "Failed to lookup user");
@@ -188,7 +192,7 @@ export default function AdminMembershipsPage() {
         <div className="mt-6 grid gap-4 lg:grid-cols-[320px,1fr]">
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">Members (A–Z)</div>
+              <div className="text-sm font-medium">Profiles</div>
               <button
                 onClick={() => loadMembers({ reset: true })}
                 disabled={membersLoading}
@@ -215,7 +219,7 @@ export default function AdminMembershipsPage() {
                         onClick={() => {
                           const nextEmail = (m.email || "").trim();
                           setEmail(nextEmail);
-                          if (nextEmail) void lookup(nextEmail);
+                          void lookup(nextEmail, m.clerkUserId);
                         }}
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-muted ${isSelected ? "bg-muted" : ""}`}
                       >

@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url);
   const email = (url.searchParams.get("email") || "").trim();
-  if (!email) return badRequest("Missing email");
+  const clerkUserId = (url.searchParams.get("clerkUserId") || "").trim();
+  
+  if (!email && !clerkUserId) return badRequest("Missing email or clerkUserId");
 
   const baseUrl = process.env.BEFORE_AND_AFTERS_BASE_URL || "https://beforeandafters.vercel.app";
   const secret = process.env.BEFORE_AND_AFTERS_ADMIN_SECRET;
@@ -26,7 +28,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing BEFORE_AND_AFTERS_ADMIN_SECRET" }, { status: 500 });
   }
 
-  const res = await fetch(`${baseUrl}/api/admin/memberships?email=${encodeURIComponent(email)}`, {
+  const qs = new URLSearchParams();
+  if (email) qs.set("email", email);
+  if (clerkUserId) qs.set("clerkUserId", clerkUserId);
+
+  const res = await fetch(`${baseUrl}/api/admin/memberships?${qs.toString()}`, {
     method: "GET",
     headers: {
       "x-wardrobe-admin-secret": secret,
