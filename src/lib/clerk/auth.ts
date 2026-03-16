@@ -39,14 +39,15 @@ export async function requireStaffOrAdmin() {
 export async function requireAdmin() {
   const user = await requireClerkUser();
   const email = user.emailAddresses?.[0]?.emailAddress?.toLowerCase();
-  if (email !== "robinrussellfrench@gmail.com") {
+  if (email !== "robinrussellfrench@gmail.com" && email !== "michellejonilapidos@gmail.com") {
     throw new ClerkAuthzError("Forbidden - Admin only", 403);
   }
   return { user, email };
 }
 
 export function isAdminEmail(email: string | undefined): boolean {
-  return email?.toLowerCase() === "robinrussellfrench@gmail.com";
+  const normalized = email?.toLowerCase();
+  return normalized === "robinrussellfrench@gmail.com" || normalized === "michellejonilapidos@gmail.com";
 }
 
 export async function requireSignedInUser() {
