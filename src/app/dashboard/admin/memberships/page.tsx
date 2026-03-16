@@ -22,6 +22,15 @@ type UserRow = {
   createdAt: string;
 };
 
+type MemberListRow = {
+  id: string;
+  email: string;
+  name: string;
+  displayName: string | null;
+  membershipTier: MembershipTier;
+  membershipEndDate: string | null;
+};
+
 const TIERS: MembershipTier[] = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
 
 function toDateTimeLocalValue(d: Date) {
@@ -36,6 +45,11 @@ export default function AdminMembershipsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [user, setUser] = React.useState<UserRow | null>(null);
 
+  const [members, setMembers] = React.useState<MemberListRow[]>([]);
+  const [membersLoading, setMembersLoading] = React.useState(false);
+  const [membersCursor, setMembersCursor] = React.useState<string | null>(null);
+  const [hasMoreMembers, setHasMoreMembers] = React.useState(true);
+
   const [tier, setTier] = React.useState<MembershipTier>("Eeeehs");
   const [start, setStart] = React.useState(() => toDateTimeLocalValue(new Date()));
   const [end, setEnd] = React.useState(() => {
@@ -46,13 +60,50 @@ export default function AdminMembershipsPage() {
   const [depositPaid, setDepositPaid] = React.useState(false);
   const [note, setNote] = React.useState("");
 
-  const lookup = async () => {
-    if (!email.trim()) return;
+  const loadMembers = React.useCallback(
+    async ({ reset }: { reset: boolean }) => {
+      setMembersLoading(true);
+      setError(null);
+      try {
+        if (reset) {
+          setMembersCursor(null);
+          setHasMoreMembers(true);
+        }
+
+        const qs = new URLSearchParams();
+        qs.set("limit", "200");
+        if (!reset && membersCursor) qs.set("cursor", membersCursor);
+
+        const res = await fetch(`/api/admin/memberships/list?${qs.toString()}`, { cache: "no-store" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError((json as any)?.error || "Failed to load members");
+          return;
+        }
+
+        const list = Array.isArray((json as any)?.users) ? ((json as any).users as MemberListRow[]) : [];
+        const nextCursor = typeof (json as any)?.nextCursor === "string" ? ((json as any).nextCursor as string) : null;
+
+        setMembers((prev) => (reset ? list : [...prev, ...list]));
+        setMembersCursor(nextCursor);
+        setHasMoreMembers(Boolean(nextCursor));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load members");
+      } finally {
+        setMembersLoading(false);
+      }
+    },
+    [membersCursor],
+  );
+
+  const lookup = async (emailOverride?: string) => {
+    const effectiveEmail = (emailOverride ?? email).trim();
+    if (!effectiveEmail) return;
     setLoading(true);
     setError(null);
     setUser(null);
     try {
-      const res = await fetch(`/api/admin/memberships?email=${encodeURIComponent(email.trim())}`, { cache: "no-store" });
+      const res = await fetch(`/api/admin/memberships?email=${encodeURIComponent(effectiveEmail)}`, { cache: "no-store" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError((json as any)?.error || "Failed to lookup user");
@@ -62,6 +113,7 @@ export default function AdminMembershipsPage() {
       const found = (json as any)?.user as UserRow | null;
       setUser(found);
       if (found) {
+        setEmail(found.email);
         setTier(found.membershipTier);
         setDepositPaid(Boolean(found.depositPaid));
         setStart(toDateTimeLocalValue(new Date(found.membershipStartDate)));
@@ -73,6 +125,10 @@ export default function AdminMembershipsPage() {
       setLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    loadMembers({ reset: true });
+  }, [loadMembers]);
 
   const save = async () => {
     if (!email.trim()) return;
@@ -108,7 +164,7 @@ export default function AdminMembershipsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -129,29 +185,87 @@ export default function AdminMembershipsPage() {
           <div className="mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 border border-red-200">{error}</div>
         ) : null}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr,160px]">
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="member@email.com"
-            className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-          />
-          <button
-            onClick={lookup}
-            disabled={loading || !email.trim()}
-            className="h-10 rounded-lg bg-black px-4 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-          >
-            {loading ? "Looking…" : "Lookup"}
-          </button>
-        </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-[320px,1fr]">
+          <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Members (A–Z)</div>
+              <button
+                onClick={() => loadMembers({ reset: true })}
+                disabled={membersLoading}
+                className="rounded-lg border border-border bg-background px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="mt-3 max-h-[70vh] overflow-auto rounded-lg border border-border bg-background">
+              {members.length === 0 && !membersLoading ? (
+                <div className="p-3 text-sm text-muted-foreground">No members found.</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {members.map((m) => {
+                    const label = m.displayName || m.name || m.email;
+                    const isSelected = user?.email?.toLowerCase() === m.email.toLowerCase();
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setEmail(m.email);
+                          void lookup(m.email);
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-muted ${isSelected ? "bg-muted" : ""}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium truncate">{label}</div>
+                          <div className="text-xs font-mono text-muted-foreground">{m.membershipTier}</div>
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-foreground truncate">{m.email}</div>
+                      </button>
+                    );
+                  })}
+                  {membersLoading ? (
+                    <div className="p-3 text-sm text-muted-foreground">Loading…</div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => loadMembers({ reset: false })}
+                disabled={!hasMoreMembers || membersLoading}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
+              >
+                {hasMoreMembers ? "Load more" : "End"}
+              </button>
+            </div>
 
-        <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
-          <div className="text-sm font-medium">Update membership</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {user ? `Editing ${user.email} (${user.displayName || user.name})` : "Lookup a user first."}
+            <div className="mt-4 border-t border-border pt-4">
+              <div className="text-xs font-medium text-muted-foreground">Fallback: lookup by email</div>
+              <div className="mt-2 grid gap-2 grid-cols-[1fr,120px]">
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="member@email.com"
+                  className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
+                />
+                <button
+                  onClick={() => void lookup()}
+                  disabled={loading || !email.trim()}
+                  className="h-10 rounded-lg bg-black px-4 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {loading ? "Looking…" : "Lookup"}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <div className="text-sm font-medium">Update membership</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {user ? `Editing ${user.email} (${user.displayName || user.name})` : "Select a member from the list."}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-1">Tier</label>
               <select
@@ -201,9 +315,9 @@ export default function AdminMembershipsPage() {
                 className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
               />
             </div>
-          </div>
+            </div>
 
-          <div className="mt-3">
+            <div className="mt-3">
             <label className="block text-sm font-medium mb-1">Internal note</label>
             <input
               value={note}
@@ -212,9 +326,9 @@ export default function AdminMembershipsPage() {
               placeholder="Paid cash at door, receipt #..."
               className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
             />
-          </div>
+            </div>
 
-          {user ? (
+            {user ? (
             <div className="mt-4 rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
               <div>
                 Current: <span className="font-medium text-foreground">{user.membershipTier}</span>
@@ -225,7 +339,7 @@ export default function AdminMembershipsPage() {
             </div>
           ) : null}
 
-          <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-end">
             <button
               onClick={save}
               disabled={!user || saving}
@@ -233,6 +347,7 @@ export default function AdminMembershipsPage() {
             >
               {saving ? "Saving…" : "Save membership"}
             </button>
+            </div>
           </div>
         </div>
       </div>
