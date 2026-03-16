@@ -185,14 +185,12 @@ export default function AdminMembershipsPage() {
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold">Membership Overrides (Cash)</h1>
-            <p className="text-sm text-muted-foreground">
-              Admin-only tool to set membership tier + start/end dates when someone pays cash.
-            </p>
+            <h1 className="text-xl font-semibold">Profile Editor</h1>
           </div>
+
           <Link
             href="/dashboard/admin"
-            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
           >
             Back
           </Link>
