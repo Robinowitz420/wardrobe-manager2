@@ -27,6 +27,8 @@ type MemberListRow = {
   clerkUserId: string;
   displayName: string | null;
   email: string | null;
+  membershipTier: string | null;
+  membershipEndDate: string | null;
 };
 
 const TIERS: MembershipTier[] = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
@@ -203,6 +205,9 @@ export default function AdminMembershipsPage() {
                   {members.map((m) => {
                     const label = m.displayName || m.email || m.clerkUserId;
                     const isSelected = user?.email?.toLowerCase() === (m.email || "").toLowerCase();
+                    const tierLabel = m.membershipTier || "none";
+                    const endDate = m.membershipEndDate ? new Date(m.membershipEndDate) : null;
+                    const isExpired = endDate ? endDate < new Date() : true;
                     return (
                       <button
                         key={m.id}
@@ -216,9 +221,14 @@ export default function AdminMembershipsPage() {
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="font-medium truncate">{label}</div>
-                          <div className="text-xs font-mono text-muted-foreground">—</div>
+                          <div className={`text-xs font-mono ${isExpired ? "text-red-500" : "text-muted-foreground"}`}>{tierLabel}</div>
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground truncate">{m.email || "(no email on profile)"}</div>
+                        {endDate ? (
+                          <div className={`mt-0.5 text-xs ${isExpired ? "text-red-500" : "text-muted-foreground"}`}>
+                            {isExpired ? "Expired" : "Renews"}: {endDate.toLocaleDateString()}
+                          </div>
+                        ) : null}
                       </button>
                     );
                   })}
