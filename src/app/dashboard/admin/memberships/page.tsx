@@ -45,6 +45,9 @@ export default function AdminMembershipsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [user, setUser] = React.useState<UserRow | null>(null);
 
+  // Track selected profile from sidebar (for clerkUserId when creating new Prisma user)
+  const [selectedProfile, setSelectedProfile] = React.useState<MemberListRow | null>(null);
+
   const [members, setMembers] = React.useState<MemberListRow[]>([]);
   const [membersLoading, setMembersLoading] = React.useState(false);
   const [membersCursor, setMembersCursor] = React.useState<string | null>(null);
@@ -57,7 +60,6 @@ export default function AdminMembershipsPage() {
     d.setMonth(d.getMonth() + 1);
     return toDateTimeLocalValue(d);
   });
-  const [depositPaid, setDepositPaid] = React.useState(false);
   const [note, setNote] = React.useState("");
 
   const loadMembers = React.useCallback(
@@ -118,10 +120,16 @@ export default function AdminMembershipsPage() {
       setUser(found);
       if (found) {
         setEmail(found.email);
-        setTier(found.membershipTier);
-        setDepositPaid(Boolean(found.depositPaid));
+        setTier(found.membershipTier || "Eeeehs");
         setStart(toDateTimeLocalValue(new Date(found.membershipStartDate)));
         if (found.membershipEndDate) setEnd(toDateTimeLocalValue(new Date(found.membershipEndDate)));
+      } else if (selectedProfile) {
+        // No Prisma user, but we have a profile - set defaults for new membership
+        setTier("Eeeehs");
+        setStart(toDateTimeLocalValue(new Date()));
+        const d = new Date();
+        d.setMonth(d.getMonth() + 1);
+        setEnd(toDateTimeLocalValue(d));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to lookup user");
@@ -147,8 +155,10 @@ export default function AdminMembershipsPage() {
           membershipTier: tier,
           membershipStartDate: new Date(start).toISOString(),
           membershipEndDate: new Date(end).toISOString(),
-          depositPaid,
           note,
+          // Include clerkUserId and name for creating new Prisma users
+          ...(selectedProfile?.clerkUserId ? { clerkUserId: selectedProfile.clerkUserId } : {}),
+          ...(selectedProfile?.displayName ? { name: selectedProfile.displayName } : {}),
         }),
       });
 
@@ -159,7 +169,10 @@ export default function AdminMembershipsPage() {
       }
 
       setNote("");
-      await lookup();
+      // Reload the profile list to show updated membership
+      await loadMembers({ reset: true });
+      // Re-lookup this user to refresh the form
+      await lookup(email.trim(), selectedProfile?.clerkUserId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update membership");
     } finally {
@@ -219,6 +232,7 @@ export default function AdminMembershipsPage() {
                         onClick={() => {
                           const nextEmail = (m.email || "").trim();
                           setEmail(nextEmail);
+                          setSelectedProfile(m);
                           void lookup(nextEmail, m.clerkUserId);
                         }}
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-muted ${isSelected ? "bg-muted" : ""}`}
@@ -275,7 +289,11 @@ export default function AdminMembershipsPage() {
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <div className="text-sm font-medium">Update membership</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {user ? `Editing ${user.email} (${user.displayName || user.name})` : "Select a member from the list."}
+              {user
+                ? `Editing ${user.email} (${user.displayName || user.name})`
+                : selectedProfile
+                  ? `New membership for ${selectedProfile.displayName || selectedProfile.email || selectedProfile.clerkUserId}`
+                  : "Select a profile from the list."}
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -284,7 +302,7 @@ export default function AdminMembershipsPage() {
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value as MembershipTier)}
-                disabled={!user}
+                disabled={!user && !selectedProfile}
                 className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
               >
                 {TIERS.map((t) => (
@@ -295,25 +313,13 @@ export default function AdminMembershipsPage() {
               </select>
             </div>
 
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={depositPaid}
-                  onChange={(e) => setDepositPaid(e.target.checked)}
-                  disabled={!user}
-                />
-                Deposit paid
-              </label>
-            </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Start</label>
               <input
                 type="datetime-local"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                disabled={!user}
+                disabled={!user && !selectedProfile}
                 className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
               />
             </div>
@@ -324,7 +330,7 @@ export default function AdminMembershipsPage() {
                 type="datetime-local"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                disabled={!user}
+                disabled={!user && !selectedProfile}
                 className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
               />
             </div>
@@ -335,7 +341,7 @@ export default function AdminMembershipsPage() {
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              disabled={!user}
+              disabled={!user && !selectedProfile}
               placeholder="Paid cash at door, receipt #..."
               className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm disabled:opacity-50"
             />
@@ -350,12 +356,16 @@ export default function AdminMembershipsPage() {
               </div>
               <div className="mt-1 text-xs">Last updated: {new Date(user.updatedAt).toLocaleString()}</div>
             </div>
+          ) : selectedProfile ? (
+            <div className="mt-4 rounded-lg border border-dashed border-border bg-background p-3 text-sm text-muted-foreground">
+              No existing membership. Saving will create a new one.
+            </div>
           ) : null}
 
             <div className="mt-4 flex justify-end">
             <button
               onClick={save}
-              disabled={!user || saving}
+              disabled={(!user && !selectedProfile) || saving}
               className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save membership"}
