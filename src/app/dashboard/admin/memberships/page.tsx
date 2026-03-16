@@ -24,11 +24,9 @@ type UserRow = {
 
 type MemberListRow = {
   id: string;
-  email: string;
-  name: string;
+  clerkUserId: string;
   displayName: string | null;
-  membershipTier: MembershipTier;
-  membershipEndDate: string | null;
+  email: string | null;
 };
 
 const TIERS: MembershipTier[] = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
@@ -74,7 +72,7 @@ export default function AdminMembershipsPage() {
         qs.set("limit", "200");
         if (!reset && membersCursor) qs.set("cursor", membersCursor);
 
-        const res = await fetch(`/api/admin/memberships/list?${qs.toString()}`, { cache: "no-store" });
+        const res = await fetch(`/api/admin/profiles/list?${qs.toString()}`, { cache: "no-store" });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           setError((json as any)?.error || "Failed to load members");
@@ -203,23 +201,24 @@ export default function AdminMembershipsPage() {
               ) : (
                 <div className="divide-y divide-border">
                   {members.map((m) => {
-                    const label = m.displayName || m.name || m.email;
-                    const isSelected = user?.email?.toLowerCase() === m.email.toLowerCase();
+                    const label = m.displayName || m.email || m.clerkUserId;
+                    const isSelected = user?.email?.toLowerCase() === (m.email || "").toLowerCase();
                     return (
                       <button
                         key={m.id}
                         type="button"
                         onClick={() => {
-                          setEmail(m.email);
-                          void lookup(m.email);
+                          const nextEmail = (m.email || "").trim();
+                          setEmail(nextEmail);
+                          if (nextEmail) void lookup(nextEmail);
                         }}
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-muted ${isSelected ? "bg-muted" : ""}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="font-medium truncate">{label}</div>
-                          <div className="text-xs font-mono text-muted-foreground">{m.membershipTier}</div>
+                          <div className="text-xs font-mono text-muted-foreground">—</div>
                         </div>
-                        <div className="mt-0.5 text-xs text-muted-foreground truncate">{m.email}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground truncate">{m.email || "(no email on profile)"}</div>
                       </button>
                     );
                   })}
