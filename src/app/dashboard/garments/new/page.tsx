@@ -219,14 +219,27 @@ export default function NewGarmentPage() {
       const picked = Array.from(files);
       if (picked.length === 0) return;
 
+      console.log("[Bulk Intake] Starting with", picked.length, "files");
+
       const normalized = await Promise.all(picked.map((f) => normalizeImageFile(f)));
+      console.log("[Bulk Intake] Normalized files");
+
       const uploaded = await uploadFilesToDisk(normalized);
-      if (uploaded.length !== normalized.length) throw new Error("Upload failed");
+      console.log("[Bulk Intake] Uploaded", uploaded.length, "files:", uploaded);
+
+      if (uploaded.length !== normalized.length) {
+        throw new Error(`Upload incomplete: ${uploaded.length}/${normalized.length} files uploaded`);
+      }
 
       const createdIds: string[] = [];
       for (let i = 0; i < uploaded.length; i++) {
         const u = uploaded[i];
-        if (!u?.src || !u?.fileName) continue;
+        if (!u?.src || !u?.fileName) {
+          console.warn("[Bulk Intake] Skipping invalid upload:", u);
+          continue;
+        }
+
+        console.log(`[Bulk Intake] Creating garment ${i + 1}/${uploaded.length}`);
 
         const photos: GarmentPhoto[] = [
           {
@@ -245,11 +258,14 @@ export default function NewGarmentPage() {
         };
 
         const saved = await createGarment(draft);
+        console.log(`[Bulk Intake] Created garment:`, saved.id);
         createdIds.push(saved.id);
       }
 
+      console.log("[Bulk Intake] Complete! Created", createdIds.length, "garments");
       router.push("/dashboard/garments");
     } catch (e) {
+      console.error("[Bulk Intake] Error:", e);
       const msg = e instanceof Error ? e.message : "Bulk intake failed";
       setError(msg);
     } finally {

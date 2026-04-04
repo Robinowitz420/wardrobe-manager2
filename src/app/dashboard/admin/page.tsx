@@ -27,7 +27,7 @@ export default function AdminPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-muted/30 p-4">
-            <div className="text-lg font-semibold">Membership Overrides</div>
+            <div className="text-lg font-semibold">Profile/Membership Management</div>
             <div className="mt-1 text-sm text-muted-foreground">
               Manually set membership tier and dates for cash payments.
             </div>
