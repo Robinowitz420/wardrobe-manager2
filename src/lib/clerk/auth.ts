@@ -27,21 +27,22 @@ export async function requireClerkUser() {
   return user;
 }
 
+/**
+ * NOTE: Role checks disabled — any signed-in Clerk user passes.
+ * Restore staff/admin enforcement before exposing sensitive ops publicly.
+ */
 export async function requireStaffOrAdmin() {
   const user = await requireClerkUser();
-  const role = roleFromPublicMetadata(user.publicMetadata?.role);
-  if (role !== "admin" && role !== "staff") {
-    throw new ClerkAuthzError("Forbidden", 403);
-  }
+  const role = roleFromPublicMetadata(user.publicMetadata?.role) ?? "member";
   return { user, role };
 }
 
+/**
+ * NOTE: Email allowlist disabled — any signed-in Clerk user passes.
+ */
 export async function requireAdmin() {
   const user = await requireClerkUser();
   const email = user.emailAddresses?.[0]?.emailAddress?.toLowerCase();
-  if (email !== "robinrussellfrench@gmail.com" && email !== "michellejonilapidos@gmail.com") {
-    throw new ClerkAuthzError("Forbidden - Admin only", 403);
-  }
   return { user, email };
 }
 

@@ -15,6 +15,9 @@ type UserRow = {
   membershipTier: MembershipTier;
   membershipStartDate: string;
   membershipEndDate: string | null;
+  subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
   maxItemsAllowed: number;
   monthlyFreeGlitcoins: number;
   depositPaid: boolean;
@@ -29,6 +32,9 @@ type MemberListRow = {
   email: string | null;
   membershipTier: string | null;
   membershipEndDate: string | null;
+  subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
 };
 
 const TIERS: MembershipTier[] = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
@@ -36,6 +42,27 @@ const TIERS: MembershipTier[] = ["Eeeehs", "Oooohs", "Aaaaahs", "Mmmmms"];
 function toDateTimeLocalValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getSubscriptionLabel(u: {
+  subscriptionStatus?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  currentPeriodEnd?: string | null;
+}) {
+  if (u.subscriptionStatus === "canceled") {
+    return { text: "Canceled", toneClass: "text-red-600" };
+  }
+  if (u.cancelAtPeriodEnd) {
+    const date = u.currentPeriodEnd ? new Date(u.currentPeriodEnd).toLocaleDateString() : null;
+    return {
+      text: date ? `Cancels at period end (${date})` : "Cancels at period end",
+      toneClass: "text-amber-600",
+    };
+  }
+  if (u.subscriptionStatus === "active") {
+    return { text: "Active", toneClass: "text-green-600" };
+  }
+  return { text: "No subscription status", toneClass: "text-muted-foreground" };
 }
 
 export default function AdminMembershipsPage() {
@@ -223,6 +250,7 @@ export default function AdminMembershipsPage() {
                     const tierLabel = m.membershipTier || "none";
                     const endDate = m.membershipEndDate ? new Date(m.membershipEndDate) : null;
                     const isExpired = endDate ? endDate < new Date() : true;
+                    const subscription = getSubscriptionLabel(m);
                     return (
                       <button
                         key={m.id}
@@ -245,6 +273,7 @@ export default function AdminMembershipsPage() {
                             {isExpired ? "Expired" : "Renews"}: {endDate.toLocaleDateString()}
                           </div>
                         ) : null}
+                        <div className={`mt-0.5 text-xs ${subscription.toneClass}`}>{subscription.text}</div>
                       </button>
                     );
                   })}
@@ -347,12 +376,22 @@ export default function AdminMembershipsPage() {
 
             {user ? (
             <div className="mt-4 rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
+              {(() => {
+                const subscription = getSubscriptionLabel(user);
+                return (
+                  <>
               <div>
                 Current: <span className="font-medium text-foreground">{user.membershipTier}</span>
                 {" "}· Items: {user.maxItemsAllowed}
                 {" "}· Free Glitcoins: {user.monthlyFreeGlitcoins}
               </div>
+              <div className={`mt-1 text-xs ${subscription.toneClass}`}>
+                Subscription: {subscription.text}
+              </div>
               <div className="mt-1 text-xs">Last updated: {new Date(user.updatedAt).toLocaleString()}</div>
+                  </>
+                );
+              })()}
             </div>
           ) : selectedProfile ? (
             <div className="mt-4 rounded-lg border border-dashed border-border bg-background p-3 text-sm text-muted-foreground">

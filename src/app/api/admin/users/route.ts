@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
   const role = typeof (payload as any)?.role === "string" ? (payload as any).role.trim() : "";
 
   if (!userId) return badRequest("Missing userId");
-  if (!["admin", "staff"].includes(role)) return badRequest("Invalid role");
+  if (!["admin", "staff", "member"].includes(role)) return badRequest("Invalid role");
 
   const client = clerkClient();
   await client.users.updateUser(userId, {
