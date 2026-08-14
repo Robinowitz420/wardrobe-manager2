@@ -20,6 +20,7 @@ import {
 } from "@/constants/garment";
 import { PhotoUploader } from "@/components/garments/photo-uploader";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
+import { CustomOptionChips } from "@/components/garments/custom-option-chips";
 import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
 import type { GarmentCreateInput } from "@/lib/validations/garment";
 import { garmentCreateInputSchema } from "@/lib/validations/garment";
@@ -486,6 +487,12 @@ export default function NewGarmentPage() {
                     );
                   })}
                 </div>
+                <CustomOptionChips
+                  categoryKey="garmentTypes"
+                  addLabel="New garment type"
+                  value={form.garmentType ?? undefined}
+                  onSelect={(next) => setField("garmentType", next)}
+                />
               </label>
 
               <label className="grid gap-1">

@@ -3,7 +3,13 @@
 import * as React from "react";
 
 import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
-import { POCKET_BUTTON_IMAGE_MAP } from "@/constants/garment";
+import {
+  COLOR_SWATCHES,
+  PATTERN_BACKGROUNDS,
+  PATTERN_BACKGROUND_SIZES,
+  PATTERN_LIGHT_TEXT,
+  POCKET_BUTTON_IMAGE_MAP,
+} from "@/constants/garment";
 
 import { authFetch } from "@/lib/firebase/auth-fetch";
 
@@ -30,41 +36,70 @@ function toKebabCase(s: string): string {
   return t;
 }
 
-function colorTextStyleForOption(categoryKey: string, opt: string): React.CSSProperties | undefined {
-  if (categoryKey !== "colors") return undefined;
+type Hsl = { h: number; s: number; l: number };
+
+function hexToHsl(hex: string): Hsl | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return null;
+  const int = parseInt(m[1], 16);
+  const r = ((int >> 16) & 255) / 255;
+  const g = ((int >> 8) & 255) / 255;
+  const b = (int & 255) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function swatchHexForOption(opt: string): string | null {
+  const direct = COLOR_SWATCHES[opt];
+  if (direct) return direct;
   const k = opt.toLowerCase();
-  if (k === "black") return { color: "#111827" };
-  if (k === "white") return { color: "#6b7280" };
-  if (k === "gray") return { color: "#6b7280" };
-  if (k === "brown") return { color: "#7c4a2d" };
-  if (k === "navy") return { color: "#1f3a8a" };
-  if (k === "blue") return { color: "#2563eb" };
-  if (k === "green") return { color: "#16a34a" };
-  if (k === "red") return { color: "#dc2626" };
-  if (k === "pink") return { color: "#db2777" };
-  if (k === "purple") return { color: "#7c3aed" };
-  if (k === "yellow") return { color: "#ca8a04" };
-  if (k === "orange") return { color: "#ea580c" };
-  if (k === "multicolor") return { color: "#7c3aed" };
-  return undefined;
+  for (const [name, hex] of Object.entries(COLOR_SWATCHES)) {
+    if (name.toLowerCase() === k) return hex;
+  }
+  return null;
 }
 
 function colorFillVarsForOption(opt: string): { bg1: string; bg2: string; text: string } | null {
-  const k = String(opt).toLowerCase();
-  if (k === "black") return { bg1: "0 0% 10%", bg2: "0 0% 6%", text: "0 0% 100%" };
-  if (k === "white") return { bg1: "0 0% 100%", bg2: "0 0% 96%", text: "0 0% 10%" };
-  if (k === "gray") return { bg1: "220 10% 80%", bg2: "220 10% 72%", text: "0 0% 10%" };
-  if (k === "brown") return { bg1: "22 45% 45%", bg2: "22 45% 38%", text: "0 0% 100%" };
-  if (k === "navy") return { bg1: "222 70% 35%", bg2: "222 70% 28%", text: "0 0% 100%" };
-  if (k === "blue") return { bg1: "220 85% 58%", bg2: "220 85% 50%", text: "0 0% 100%" };
-  if (k === "green") return { bg1: "142 70% 45%", bg2: "142 70% 38%", text: "0 0% 100%" };
-  if (k === "red") return { bg1: "0 85% 55%", bg2: "0 85% 47%", text: "0 0% 100%" };
-  if (k === "pink") return { bg1: "330 85% 65%", bg2: "330 85% 58%", text: "0 0% 100%" };
-  if (k === "purple") return { bg1: "268 80% 62%", bg2: "268 80% 54%", text: "0 0% 100%" };
-  if (k === "yellow") return { bg1: "56 95% 60%", bg2: "56 95% 52%", text: "0 0% 10%" };
-  if (k === "orange") return { bg1: "24 95% 56%", bg2: "24 95% 48%", text: "0 0% 100%" };
-  if (k === "multicolor") return { bg1: "268 80% 62%", bg2: "196 85% 55%", text: "0 0% 100%" };
-  return null;
+  const hex = swatchHexForOption(String(opt));
+  if (!hex) return null;
+  const hsl = hexToHsl(hex);
+  if (!hsl) return null;
+  const darker = Math.max(0, hsl.l - 8);
+  return {
+    bg1: `${hsl.h} ${hsl.s}% ${hsl.l}%`,
+    bg2: `${hsl.h} ${hsl.s}% ${darker}%`,
+    text: hsl.l > 62 ? "0 0% 10%" : "0 0% 100%",
+  };
+}
+
+function patternStyleForOption(opt: string): React.CSSProperties | undefined {
+  const bg = PATTERN_BACKGROUNDS[opt];
+  if (!bg) return undefined;
+  const size = PATTERN_BACKGROUND_SIZES[opt];
+  return {
+    backgroundImage: bg,
+    ...(size ? { backgroundSize: size } : {}),
+    color: PATTERN_LIGHT_TEXT.has(opt) ? "#ffffff" : "#0f172a",
+    textShadow: PATTERN_LIGHT_TEXT.has(opt)
+      ? "0 1px 2px rgba(0,0,0,.65)"
+      : "0 1px 2px rgba(255,255,255,.75)",
+  };
 }
 
 export function MultiSelectChips<T extends string>({
@@ -203,6 +238,20 @@ export function MultiSelectChips<T extends string>({
     }
   }
 
+  async function removeCustomOption(opt: string) {
+    const ok = window.confirm(`Remove "${opt}" from ${label}? This removes it for everyone.`);
+    if (!ok) return;
+
+    const res = await authFetch(
+      `/api/options?category=${encodeURIComponent(categoryKey)}&value=${encodeURIComponent(opt)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) return;
+
+    setCustomOptions((prev) => prev.filter((x) => x.toLowerCase() !== opt.toLowerCase()));
+    onChange(safeValue.filter((v) => String(v).toLowerCase() !== opt.toLowerCase()));
+  }
+
   return (
     <div className="space-y-2">
       {label ? (
@@ -216,7 +265,11 @@ export function MultiSelectChips<T extends string>({
       <div className="flex flex-wrap gap-2">
         {mergedOptions.map((opt) => {
           const active = safeValue.includes(opt);
-          const fill = categoryKey === "colors" && active ? colorFillVarsForOption(String(opt)) : null;
+          const fill = categoryKey === "colors" ? colorFillVarsForOption(String(opt)) : null;
+          const patternStyle = categoryKey === "patterns" ? patternStyleForOption(String(opt)) : undefined;
+          const isCustom = !(options as readonly string[]).some(
+            (o) => String(o).toLowerCase() === String(opt).toLowerCase(),
+          );
           const pocketImageFile = usePocketImages
             ? (POCKET_BUTTON_IMAGE_MAP as Record<string, string | undefined>)[String(opt)]
             : undefined;
@@ -230,20 +283,24 @@ export function MultiSelectChips<T extends string>({
                 : null;
           const style = {
             ...(!useImageTile ? bubbleSizeForLabel(String(opt)) : {}),
-            ...(active && fill
+            ...(fill
               ? {
                   ['--bubble-bg-1' as any]: fill.bg1,
                   ['--bubble-bg-2' as any]: fill.bg2,
                   ['--bubble-bg-1-active' as any]: fill.bg1,
                   ['--bubble-bg-2-active' as any]: fill.bg2,
                   ['--bubble-text-color' as any]: fill.text,
+                  color: `hsl(${fill.text})`,
                 }
               : {}),
-            ...(!active ? colorTextStyleForOption(categoryKey, String(opt)) : undefined),
+            ...(patternStyle ?? {}),
+            ...(active && (patternStyle || fill)
+              ? { outline: "3px solid hsl(var(--ring, 0 0% 10%))", outlineOffset: "2px" }
+              : {}),
           } as React.CSSProperties;
           return (
+            <span key={opt} className="relative inline-flex">
             <button
-              key={opt}
               type="button"
               onClick={() => toggle(opt)}
               data-active={active ? "true" : "false"}
@@ -276,8 +333,70 @@ export function MultiSelectChips<T extends string>({
                 opt
               )}
             </button>
+            {isCustom ? (
+              <button
+                type="button"
+                title="Remove this option permanently"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void removeCustomOption(String(opt));
+                }}
+                className="absolute -right-1 -top-1 z-10 grid h-5 w-5 place-items-center rounded-full border border-border bg-card text-xs font-bold text-foreground/70 shadow-sm hover:bg-destructive hover:text-white"
+              >
+                ×
+              </button>
+            ) : null}
+            </span>
           );
         })}
+
+        {addingOther ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1">
+            <input
+              autoFocus
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void saveOther();
+                }
+                if (e.key === "Escape") {
+                  setAddingOther(false);
+                  setOtherText("");
+                }
+              }}
+              placeholder={`New ${label.toLowerCase()} option`}
+              className="w-44 bg-transparent px-2 py-1 text-sm outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void saveOther()}
+              disabled={savingOther}
+              className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {savingOther ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddingOther(false);
+                setOtherText("");
+              }}
+              className="rounded-full border border-border px-3 py-1 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAddingOther(true)}
+            className="rounded-full border border-dashed border-border bg-card px-4 py-2 text-sm font-semibold text-foreground/70 shadow-sm transition hover:bg-muted"
+          >
+            + Add
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,31 +1,26 @@
-import { COLORS, type GarmentType } from "@/constants/garment";
+import { COLOR_SWATCHES, type GarmentType } from "@/constants/garment";
 
 type Rgb = { r: number; g: number; b: number };
 
-const COLOR_TO_RGB: Record<(typeof COLORS)[number], Rgb> = {
-  Black: { r: 10, g: 10, b: 10 },
-  White: { r: 245, g: 245, b: 245 },
-  Gray: { r: 150, g: 150, b: 150 },
-  Brown: { r: 120, g: 80, b: 50 },
-  Navy: { r: 20, g: 35, b: 80 },
-  Blue: { r: 60, g: 120, b: 210 },
-  Green: { r: 70, g: 160, b: 95 },
-  Red: { r: 200, g: 60, b: 60 },
-  Pink: { r: 230, g: 120, b: 160 },
-  Purple: { r: 130, g: 90, b: 190 },
-  Yellow: { r: 230, g: 205, b: 70 },
-  Orange: { r: 230, g: 145, b: 60 },
-  Multicolor: { r: 128, g: 128, b: 128 },
-};
+function hexToRgb(hex: string): Rgb {
+  const int = parseInt(hex.replace("#", ""), 16);
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+
+const COLOR_TO_RGB: Record<string, Rgb> = Object.fromEntries(
+  Object.entries(COLOR_SWATCHES)
+    .filter(([name]) => name !== "Multicolor")
+    .map(([name, hex]) => [name, hexToRgb(hex)]),
+);
 
 function dist(a: Rgb, b: Rgb) {
   return (a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2;
 }
 
-function nearestColor(rgb: Rgb) {
-  let best: (typeof COLORS)[number] = COLORS[0];
+function nearestColor(rgb: Rgb): string {
+  let best = "Black";
   let bestD = Infinity;
-  for (const c of COLORS) {
+  for (const c of Object.keys(COLOR_TO_RGB)) {
     const d = dist(rgb, COLOR_TO_RGB[c]);
     if (d < bestD) {
       best = c;
@@ -41,7 +36,7 @@ export function nearestGarmentColorFromRgb(rgb: Rgb) {
 
 export async function suggestDominantColorFromDataUrl(
   dataUrl: string,
-): Promise<(typeof COLORS)[number] | undefined> {
+): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
 
   const img = new Image();

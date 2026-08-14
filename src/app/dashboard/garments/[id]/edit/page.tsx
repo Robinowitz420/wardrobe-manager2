@@ -18,6 +18,7 @@ import {
   VIBES,
 } from "@/constants/garment";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
+import { CustomOptionChips } from "@/components/garments/custom-option-chips";
 import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
 import { fetchGarmentById, generateSku, getGarment, updateGarment } from "@/lib/storage/garments";
 import type { Garment } from "@/lib/validations/garment";
@@ -266,6 +267,12 @@ export default function GarmentEditPage() {
                 );
               })}
             </div>
+            <CustomOptionChips
+              categoryKey="garmentTypes"
+              addLabel="New garment type"
+              value={garmentType || undefined}
+              onSelect={(next) => setGarmentType(next ?? "")}
+            />
           </label>
 
           <label className="grid gap-1">

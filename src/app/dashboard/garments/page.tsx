@@ -120,9 +120,19 @@ export default function GarmentsIndexPage() {
       ) : (
         <div className="mt-6 grid gap-3">
           {items.map((g) => {
+            const attrs = (g.attributes ?? {}) as Record<string, any>;
             const primary = g.photos.find((p) => p.isPrimary) ?? g.photos[0] ?? null;
             const completion = g.completionStatus === "DRAFT" ? "Draft" : "Complete";
-            const state = g.state ?? "";
+            const brand = g.brand ?? attrs.brand ?? "";
+            const state = g.state ?? attrs.state ?? "";
+            const borrow = typeof g.glitcoinBorrow === "number" ? g.glitcoinBorrow : attrs.glitcoinBorrow;
+            const details = [
+              attrs.garmentType,
+              attrs.size ? `Size ${attrs.size}` : null,
+              Array.isArray(attrs.colors) ? attrs.colors.join(", ") : null,
+              Array.isArray(attrs.fabricTypes) ? attrs.fabricTypes.join(", ") : null,
+              Array.isArray(attrs.vibes) ? attrs.vibes.slice(0, 3).join(", ") : null,
+            ].filter((x) => typeof x === "string" && x.trim());
             return (
               <Link
                 key={g.id}
@@ -148,8 +158,20 @@ export default function GarmentsIndexPage() {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold">{g.name}</div>
                         <div className="mt-1 truncate text-xs text-muted-foreground">
-                          {g.brand ? g.brand : "No brand"}
+                          {brand ? brand : "No brand"}
                         </div>
+                        {details.length > 0 ? (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {details.map((d) => (
+                              <span
+                                key={d}
+                                className="rounded-full border border-border bg-muted px-2 py-0.5 text-[0.7rem] text-foreground/80"
+                              >
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="shrink-0">
                         <div className="flex flex-col items-end gap-2">
@@ -177,7 +199,7 @@ export default function GarmentsIndexPage() {
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>{completion}</span>
                       <span>•</span>
-                      <span>Borrow: {typeof g.glitcoinBorrow === "number" ? `Ġ${g.glitcoinBorrow}` : "—"}</span>
+                      <span>Borrow: {typeof borrow === "number" ? `Ġ${borrow}` : "—"}</span>
                     </div>
                   </div>
                 </div>
