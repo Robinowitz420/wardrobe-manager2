@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { authFetch } from "@/lib/firebase/auth-fetch";
 import {
   COLORS,
+  ENCLOSURES,
   FABRIC_TYPES,
   GARMENT_TYPE_BUTTONS,
   GARMENT_TYPE_BUTTON_IMAGE_MAP,
   GARMENT_TYPES,
   INVENTORY_STATES,
+  LAUNDRY_INSTRUCTIONS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
@@ -45,6 +47,8 @@ function blankGarmentForm(): GarmentCreateInput {
     colors: [],
 
     pockets: [],
+    enclosures: [],
+    laundryInstructions: [],
     patterns: [],
     specialFeatures: [],
     fabricTypes: [],
@@ -553,6 +557,27 @@ export default function NewGarmentPage() {
                   options={POCKETS}
                   value={form.pockets ?? []}
                   onChange={(next) => setField("pockets", next)}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Enclosures"
+                  categoryKey="enclosures"
+                  options={ENCLOSURES}
+                  value={form.enclosures ?? []}
+                  onChange={(next) => setField("enclosures", next)}
+                />
+                <div className="mt-1 text-sm text-muted-foreground">How it fastens or closes.</div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <MultiSelectChips
+                  label="Laundry instructions"
+                  categoryKey="laundryInstructions"
+                  options={LAUNDRY_INSTRUCTIONS}
+                  value={form.laundryInstructions ?? []}
+                  onChange={(next) => setField("laundryInstructions", next)}
                 />
               </div>
 

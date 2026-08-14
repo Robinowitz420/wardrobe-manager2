@@ -6,10 +6,12 @@ import { useRouter, useParams } from "next/navigation";
 
 import {
   COLORS,
+  ENCLOSURES,
   FABRIC_TYPES,
   GARMENT_TYPE_BUTTONS,
   GARMENT_TYPE_BUTTON_IMAGE_MAP,
   INVENTORY_STATES,
+  LAUNDRY_INSTRUCTIONS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
@@ -37,6 +39,8 @@ export default function GarmentEditPage() {
   const [stories, setStories] = React.useState("");
   const [colors, setColors] = React.useState<any[]>([]);
   const [pockets, setPockets] = React.useState<any[]>([]);
+  const [enclosures, setEnclosures] = React.useState<any[]>([]);
+  const [laundryInstructions, setLaundryInstructions] = React.useState<any[]>([]);
   const [patterns, setPatterns] = React.useState<any[]>([]);
   const [specialFeatures, setSpecialFeatures] = React.useState<any[]>([]);
   const [fabricTypes, setFabricTypes] = React.useState<any[]>([]);
@@ -67,6 +71,10 @@ export default function GarmentEditPage() {
       setStories(found?.stories ?? "");
       setColors(Array.isArray(found?.colors) ? found.colors : []);
       setPockets(Array.isArray((found as any)?.pockets) ? (found as any).pockets : []);
+      setEnclosures(Array.isArray((found as any)?.enclosures) ? (found as any).enclosures : []);
+      setLaundryInstructions(
+        Array.isArray((found as any)?.laundryInstructions) ? (found as any).laundryInstructions : [],
+      );
       setPatterns(Array.isArray((found as any)?.patterns) ? (found as any).patterns : []);
       setSpecialFeatures(Array.isArray((found as any)?.specialFeatures) ? (found as any).specialFeatures : []);
       setFabricTypes(Array.isArray((found as any)?.fabricTypes) ? (found as any).fabricTypes : []);
@@ -106,6 +114,8 @@ export default function GarmentEditPage() {
       stories,
       colors: colors as any,
       pockets: pockets as any,
+      enclosures: enclosures as any,
+      laundryInstructions: laundryInstructions as any,
       patterns: patterns as any,
       specialFeatures: specialFeatures as any,
       fabricTypes: fabricTypes as any,
@@ -357,6 +367,26 @@ export default function GarmentEditPage() {
                 options={POCKETS}
                 value={pockets}
                 onChange={(next) => setPockets(next as any)}
+              />
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <MultiSelectChips
+                label="Enclosures"
+                categoryKey="enclosures"
+                options={ENCLOSURES}
+                value={enclosures}
+                onChange={(next) => setEnclosures(next as any)}
+              />
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <MultiSelectChips
+                label="Laundry instructions"
+                categoryKey="laundryInstructions"
+                options={LAUNDRY_INSTRUCTIONS}
+                value={laundryInstructions}
+                onChange={(next) => setLaundryInstructions(next as any)}
               />
             </div>
 

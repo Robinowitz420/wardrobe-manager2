@@ -2,10 +2,12 @@ import { z } from "zod";
 
 import {
   COLORS,
+  ENCLOSURES,
   FABRIC_TYPES,
   GARMENT_CATEGORIES,
   GARMENT_TYPES,
   INVENTORY_STATES,
+  LAUNDRY_INSTRUCTIONS,
   PATTERNS,
   POCKETS,
   SPECIAL_FEATURES,
@@ -64,6 +66,8 @@ export const garmentSchema = z.object({
   colors: z.array(z.enum(COLORS)).default([]),
 
   pockets: z.array(z.enum(POCKETS)).default([]),
+  enclosures: z.array(z.enum(ENCLOSURES)).default([]),
+  laundryInstructions: z.array(z.enum(LAUNDRY_INSTRUCTIONS)).default([]),
   patterns: z.array(z.enum(PATTERNS)).default([]),
   specialFeatures: z.array(z.enum(SPECIAL_FEATURES)).default([]),
   fabricTypes: z.array(z.enum(FABRIC_TYPES)).default([]),
