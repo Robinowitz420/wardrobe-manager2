@@ -20,6 +20,7 @@ import {
 } from "@/constants/garment";
 import { PhotoUploader } from "@/components/garments/photo-uploader";
 import { MultiSelectChips } from "@/components/garments/multi-select-chips";
+import { CustomOptionChips } from "@/components/garments/custom-option-chips";
 import { bubbleEffectsForSeed } from "@/lib/bubble-effects";
 import type { GarmentCreateInput } from "@/lib/validations/garment";
 import { garmentCreateInputSchema } from "@/lib/validations/garment";
@@ -486,6 +487,12 @@ export default function NewGarmentPage() {
                     );
                   })}
                 </div>
+                <CustomOptionChips
+                  categoryKey="garmentTypes"
+                  addLabel="New garment type"
+                  value={form.garmentType ?? undefined}
+                  onSelect={(next) => setField("garmentType", next)}
+                />
               </label>
 
               <label className="grid gap-1">
@@ -731,11 +738,11 @@ export default function NewGarmentPage() {
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="mobile-action-bar sticky bottom-0 z-30 -mx-5 mt-8 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card/95 px-5 pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pt-0 sm:backdrop-blur-none">
           <button
             type="button"
             onClick={() => router.push("/dashboard/garments")}
-            className="rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2"
+            className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold sm:flex-none shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2"
           >
             Cancel
           </button>
@@ -743,7 +750,7 @@ export default function NewGarmentPage() {
             type="button"
             onClick={() => onClear()}
             disabled={saving}
-            className="rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2 disabled:opacity-60"
+            className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-base font-semibold sm:flex-none shadow-sm transition hover:bg-muted hover:shadow-md active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2 disabled:opacity-60"
           >
             Clear
           </button>
@@ -751,7 +758,7 @@ export default function NewGarmentPage() {
             type="button"
             onClick={() => void onSave()}
             disabled={saving}
-            className="rounded-xl bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 ring-2 ring-white/80 ring-offset-2 ring-offset-primary transition hover:opacity-95 hover:shadow-primary/30 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary disabled:opacity-60"
+            className="order-first w-full shrink-0 sm:order-none sm:w-auto rounded-xl bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 ring-2 ring-white/80 ring-offset-2 ring-offset-primary transition hover:opacity-95 hover:shadow-primary/30 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary disabled:opacity-60"
           >
             {saving ? "Adding…" : "Add to Closet"}
           </button>

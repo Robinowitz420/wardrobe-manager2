@@ -588,3 +588,62 @@ select:not([multiple]) {
 select:focus:not(:focus-visible) {
   outline: none;
 }
+
+/* ---------- Small screens ---------- */
+
+/* Bubbles are sized with inline pixel values; cap them against the viewport so
+   they never overflow or crowd out a row on a phone. */
+.bubble-field,
+.bubble-button {
+  width: min(var(--bubble-size), 82vw);
+  height: auto;
+}
+
+.bubble-toggle {
+  width: min(var(--bubble-size), 40vw);
+  height: auto;
+}
+
+.bubble-textarea,
+.bubble-notes-display {
+  max-height: 100%;
+}
+
+.vibe-toggle {
+  width: min(var(--vibe-w), 44vw);
+  height: auto;
+  aspect-ratio: var(--vibe-w) / var(--vibe-h);
+}
+
+.vibe-toggle-image {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .bubble-section-title {
+    font-size: 1.7rem;
+  }
+
+  .bubble-mini-header {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  /* iOS zooms the page when a focused control renders below 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Comfortable touch targets. */
+  button,
+  a[role="button"] {
+    touch-action: manipulation;
+  }
+
+  .mobile-action-bar {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}

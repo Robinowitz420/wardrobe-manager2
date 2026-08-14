@@ -71,6 +71,28 @@ export async function GET(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    await requireStaffOrAdmin();
+
+    const url = new URL(request.url);
+    const category = (url.searchParams.get("category") ?? "").trim();
+    const value = (url.searchParams.get("value") ?? "").trim();
+
+    if (!category) return badRequest("Missing category");
+    if (!value) return badRequest("Missing value");
+
+    const db = getAdminFirestore();
+    await db.collection("custom_options").doc(safeDocId(`${category}__${value.toLowerCase()}`)).delete();
+
+    return NextResponse.json({ deleted: { category, value } });
+  } catch (e) {
+    console.error("/api/options DELETE failed", e);
+    if (e instanceof ClerkAuthzError) return NextResponse.json({ error: e.message }, { status: e.status });
+    return serverError(e instanceof Error ? e.message : "Failed to delete option");
+  }
+}
+
 export async function POST(request: Request) {
   try {
     await requireStaffOrAdmin();

@@ -1,17 +1,9 @@
 import { z } from "zod";
 
 import {
-  COLORS,
-  ENCLOSURES,
-  FABRIC_TYPES,
   GARMENT_CATEGORIES,
   GARMENT_TYPES,
   INVENTORY_STATES,
-  LAUNDRY_INSTRUCTIONS,
-  PATTERNS,
-  POCKETS,
-  SPECIAL_FEATURES,
-  VIBES,
 } from "@/constants/garment";
 
 export const garmentPhotoSchema = z.object({
@@ -46,15 +38,15 @@ export const garmentSchema = z.object({
     .object({
       garmentType: z.enum(GARMENT_TYPES).optional(),
       category: z.enum(GARMENT_CATEGORIES).optional(),
-      dominantColor: z.enum(COLORS).optional(),
-      secondaryColor: z.enum(COLORS).optional(),
+      dominantColor: z.string().optional(),
+      secondaryColor: z.string().optional(),
       notes: z.string().optional(),
     })
     .default({}),
 
   // Core identity
   sku: z.string().min(1).optional(),
-  garmentType: z.enum(GARMENT_TYPES).optional(),
+  garmentType: z.string().optional(),
   name: z.string().min(1),
   brand: z.string().optional(),
   dateAdded: z.string().min(1),
@@ -63,16 +55,17 @@ export const garmentSchema = z.object({
   size: z.string().optional(),
 
   // Aesthetic metadata
-  colors: z.array(z.enum(COLORS)).default([]),
+  // Chip fields accept custom options added by staff, so they are open strings.
+  colors: z.array(z.string()).default([]),
 
-  pockets: z.array(z.enum(POCKETS)).default([]),
-  enclosures: z.array(z.enum(ENCLOSURES)).default([]),
-  laundryInstructions: z.array(z.enum(LAUNDRY_INSTRUCTIONS)).default([]),
-  patterns: z.array(z.enum(PATTERNS)).default([]),
-  specialFeatures: z.array(z.enum(SPECIAL_FEATURES)).default([]),
-  fabricTypes: z.array(z.enum(FABRIC_TYPES)).default([]),
+  pockets: z.array(z.string()).default([]),
+  enclosures: z.array(z.string()).default([]),
+  laundryInstructions: z.array(z.string()).default([]),
+  patterns: z.array(z.string()).default([]),
+  specialFeatures: z.array(z.string()).default([]),
+  fabricTypes: z.array(z.string()).default([]),
 
-  vibes: z.array(z.enum(VIBES)).default([]),
+  vibes: z.array(z.string()).default([]),
 
   // Story
   stories: z.string().optional(),
