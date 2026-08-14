@@ -217,15 +217,19 @@ export function MultiSelectChips<T extends string>({
         {mergedOptions.map((opt) => {
           const active = safeValue.includes(opt);
           const fill = categoryKey === "colors" && active ? colorFillVarsForOption(String(opt)) : null;
+          const pocketImageFile = usePocketImages
+            ? (POCKET_BUTTON_IMAGE_MAP as Record<string, string | undefined>)[String(opt)]
+            : undefined;
+          const useImageTile = useRectImages || Boolean(pocketImageFile);
           const imageSrc = useVibeImages
             ? `/Vibe%20Buttons/${encodeURIComponent(toKebabCase(String(opt)))}.jpg`
             : useEraImages
               ? `/Era%20Buttons/B/${encodeURIComponent(toKebabCase(String(opt)))}.jpg`
-              : usePocketImages
-                ? `/PocketsButtons/${encodeURIComponent((POCKET_BUTTON_IMAGE_MAP as any)[String(opt)] ?? "")}`
+              : pocketImageFile
+                ? `/PocketsButtons/${encodeURIComponent(pocketImageFile)}`
                 : null;
           const style = {
-            ...(!(useRectImages || usePocketImages) ? bubbleSizeForLabel(String(opt)) : {}),
+            ...(!useImageTile ? bubbleSizeForLabel(String(opt)) : {}),
             ...(active && fill
               ? {
                   ['--bubble-bg-1' as any]: fill.bg1,
@@ -246,8 +250,8 @@ export function MultiSelectChips<T extends string>({
               style={style}
               className={
                 active
-                  ? `${useRectImages || usePocketImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
-                  : `${useRectImages || usePocketImages ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
+                  ? `${useImageTile ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-primary text-primary-foreground shadow-sm transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2`
+                  : `${useImageTile ? "vibe-toggle" : `bubble-toggle bubble-chip${rainbow}`} ${bubbleEffectsForSeed(`${categoryKey}:${String(opt)}`)} bg-card text-foreground/80 shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2`
               }
             >
               {imageSrc ? (

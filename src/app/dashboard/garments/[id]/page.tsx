@@ -194,6 +194,8 @@ export default function GarmentDetailPage() {
             <div className="mt-3 grid gap-2 text-sm">
               <div><span className="text-muted-foreground">Colors:</span> {Array.isArray(garment.colors) && garment.colors.length ? garment.colors.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Pockets:</span> {Array.isArray((garment as any).pockets) && (garment as any).pockets.length ? (garment as any).pockets.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Enclosures:</span> {Array.isArray((garment as any).enclosures) && (garment as any).enclosures.length ? (garment as any).enclosures.join(", ") : "—"}</div>
+              <div><span className="text-muted-foreground">Laundry instructions:</span> {Array.isArray((garment as any).laundryInstructions) && (garment as any).laundryInstructions.length ? (garment as any).laundryInstructions.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Patterns:</span> {Array.isArray((garment as any).patterns) && (garment as any).patterns.length ? (garment as any).patterns.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Special features:</span> {Array.isArray((garment as any).specialFeatures) && (garment as any).specialFeatures.length ? (garment as any).specialFeatures.join(", ") : "—"}</div>
               <div><span className="text-muted-foreground">Fabric types:</span> {Array.isArray((garment as any).fabricTypes) && (garment as any).fabricTypes.length ? (garment as any).fabricTypes.join(", ") : "—"}</div>

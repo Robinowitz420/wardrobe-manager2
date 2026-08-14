@@ -88,12 +88,54 @@ export const GARMENT_TYPE_BUTTON_IMAGE_MAP: Record<(typeof GARMENT_TYPE_BUTTONS)
 export const POCKETS = [
   "Pockets",
   "No Pockets",
+  "So Many Pockets",
+  "Just One Pocket",
+  "Hidden Pocket",
+  "Fake Pocket",
 ] as const;
 
-export const POCKET_BUTTON_IMAGE_MAP: Record<(typeof POCKETS)[number], string> = {
+export const POCKET_BUTTON_IMAGE_MAP: Partial<Record<(typeof POCKETS)[number], string>> = {
   "Pockets": "AAAAAAAAAA_r2_c2_processed_by_imagy.jpg",
   "No Pockets": "AAAAAAAAAA_r2_c3_processed_by_imagy.jpg",
 };
+
+export const ENCLOSURES = [
+  "Buttons",
+  "Zippers",
+  "Snaps",
+  "Hook and Eye",
+  "Velcro",
+  "Drawstring",
+  "Ribbon",
+  "Belt",
+  "Safety Pin",
+  "Pin",
+  "Clip",
+  "Wrap Over Panel",
+  "Rope/Cord",
+  "Buckle",
+  "Latch",
+  "Lacing",
+  "Elastic Band",
+  "Chains",
+  "Magnetic",
+] as const;
+
+export const LAUNDRY_INSTRUCTIONS = [
+  "Machine Wash Cold",
+  "Machine Wash Warm",
+  "Hand Wash",
+  "Dry Clean Only",
+  "Do Not Wash",
+  "Spot Clean",
+  "Tumble Dry Low",
+  "Do Not Tumble Dry",
+  "Hang Dry",
+  "Lay Flat to Dry",
+  "Iron Low",
+  "Do Not Iron",
+  "Do Not Bleach",
+] as const;
 
 export const PATTERNS = [
   "Solid",
@@ -291,3 +333,5 @@ export type InventoryState = (typeof INVENTORY_STATES)[number];
 export type GarmentCategory = (typeof GARMENT_CATEGORIES)[number];
 export type GarmentType = (typeof GARMENT_TYPES)[number];
 export type Vibe = (typeof VIBES)[number];
+export type Enclosure = (typeof ENCLOSURES)[number];
+export type LaundryInstruction = (typeof LAUNDRY_INSTRUCTIONS)[number];
