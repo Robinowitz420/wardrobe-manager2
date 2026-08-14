@@ -82,26 +82,23 @@ export default function GarmentsIndexPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
-      <div className="flex items-end justify-between gap-4">
-        <div />
-        <Link
-          href="/dashboard/garments/new"
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          New garment
-        </Link>
-      </div>
+      <Link
+        href="/dashboard/garments/new"
+        className="block w-full rounded-xl bg-primary px-4 py-3 text-center text-base font-medium text-primary-foreground hover:opacity-90 sm:ml-auto sm:w-auto sm:py-2 sm:text-sm"
+      >
+        New garment
+      </Link>
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Link
           href="/dashboard"
-          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="flex-1 rounded-xl bg-black px-4 py-3 text-center text-sm font-medium text-white hover:bg-gray-800 sm:flex-none sm:py-2"
         >
           ← Back to Profile
         </Link>
         <Link
           href="/schedule"
-          className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="flex-1 rounded-xl bg-black px-4 py-3 text-center text-sm font-medium text-white hover:bg-gray-800 sm:flex-none sm:py-2"
         >
           📅 Schedule
         </Link>
@@ -137,10 +134,10 @@ export default function GarmentsIndexPage() {
               <Link
                 key={g.id}
                 href={`/dashboard/garments/${g.id}`}
-                className="rounded-2xl border border-border bg-card p-4 hover:bg-muted/40"
+                className="block rounded-2xl border border-border bg-card p-3 hover:bg-muted/40 sm:p-4"
               >
-                <div className="flex gap-4">
-                  <div className="h-20 w-16 overflow-hidden rounded-xl border border-border bg-muted flex items-center justify-center">
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="h-24 w-20 shrink-0 overflow-hidden sm:h-20 sm:w-16 rounded-xl border border-border bg-muted flex items-center justify-center">
                     {primary?.src || primary?.dataUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img 
@@ -156,7 +153,7 @@ export default function GarmentsIndexPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold">{g.name}</div>
+                        <div className="truncate text-base font-semibold sm:text-sm">{g.name}</div>
                         <div className="mt-1 truncate text-xs text-muted-foreground">
                           {brand ? brand : "No brand"}
                         </div>
@@ -188,7 +185,7 @@ export default function GarmentsIndexPage() {
                               void handleDelete(g.id);
                             }}
                             disabled={deletingId === g.id}
-                            className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition disabled:opacity-60"
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 sm:h-7 sm:w-7 text-white text-xs font-bold hover:bg-red-600 transition disabled:opacity-60"
                             title="Delete"
                           >
                             {deletingId === g.id ? "…" : "✕"}
