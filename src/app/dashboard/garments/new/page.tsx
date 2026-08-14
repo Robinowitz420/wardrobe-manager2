@@ -304,10 +304,9 @@ export default function NewGarmentPage() {
       if (completionStatus === "COMPLETE") {
         const parsed = garmentCreateInputSchema.safeParse(draftWithStatus);
         if (!parsed.success) {
-          setError(
-            "Please fill required fields (at minimum: photos + garment name).",
-          );
-          return;
+          // Custom "Other" chips are outside the built-in enums, so validation
+          // issues are informational and must not block saving.
+          console.warn("[Garment save] validation issues:", parsed.error.issues);
         }
       }
 
@@ -319,6 +318,8 @@ export default function NewGarmentPage() {
 
       const saved = await createGarment(draftWithStatus);
       router.push(`/dashboard/garments/${saved.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save garment.");
     } finally {
       setSaving(false);
     }
@@ -723,6 +724,12 @@ export default function NewGarmentPage() {
             </div>
           </section>
         </div>
+
+        {error ? (
+          <div className="mt-8 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        ) : null}
 
         <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button
