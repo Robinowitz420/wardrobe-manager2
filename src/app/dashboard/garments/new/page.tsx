@@ -725,6 +725,12 @@ export default function NewGarmentPage() {
           </section>
         </div>
 
+        {error ? (
+          <div className="mt-8 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        ) : null}
+
         <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
