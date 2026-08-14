@@ -285,6 +285,10 @@ export default function NewGarmentPage() {
           typeof form.sku === "string" && form.sku.trim()
             ? form.sku.trim()
             : undefined,
+        size:
+          typeof form.size === "string" && form.size.trim()
+            ? form.size.trim()
+            : undefined,
         garmentType: form.garmentType ?? undefined,
         name: form.name.trim() ? form.name.trim() : "Untitled garment",
       };
@@ -418,6 +422,21 @@ export default function NewGarmentPage() {
                     value={form.brand ?? ""}
                     onChange={(e) => setField("brand", e.target.value)}
                     placeholder="Optional"
+                  />
+                </div>
+              </label>
+
+              <label className="grid gap-1">
+                <span className="bubble-mini-header">Size</span>
+                <div
+                  className={`bubble-field ${bubbleEffectsForSeed("new:size")}`}
+                  style={{ ['--bubble-size' as string]: `${Math.min(200, Math.max(92, 72 + String(form.size ?? "").length * 6))}px` } as React.CSSProperties}
+                >
+                  <input
+                    className="bubble-input bubble-autosize"
+                    value={form.size ?? ""}
+                    onChange={(e) => setField("size", e.target.value)}
+                    placeholder="e.g., M, 8, 32x30"
                   />
                 </div>
               </label>

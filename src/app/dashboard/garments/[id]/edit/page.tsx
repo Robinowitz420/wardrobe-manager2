@@ -29,6 +29,7 @@ export default function GarmentEditPage() {
   const [sku, setSku] = React.useState("");
   const [name, setName] = React.useState("");
   const [brand, setBrand] = React.useState("");
+  const [size, setSize] = React.useState("");
   const [garmentType, setGarmentType] = React.useState<string>("");
   const [state, setState] = React.useState<string>("");
   const [glitcoinBorrow, setGlitcoinBorrow] = React.useState<string>("");
@@ -54,6 +55,7 @@ export default function GarmentEditPage() {
       setSku(found?.sku ?? "");
       setName(found?.name ?? "");
       setBrand(found?.brand ?? "");
+      setSize(found?.size ?? "");
       setGarmentType(typeof (found as any)?.garmentType === "string" ? (found as any).garmentType : "");
       setState(found?.state ?? "Available");
       setGlitcoinBorrow(
@@ -96,6 +98,7 @@ export default function GarmentEditPage() {
       sku: sku.trim() ? sku.trim() : undefined,
       name,
       brand,
+      size: size.trim() ? size.trim() : undefined,
       garmentType: garmentType.trim() ? (garmentType as any) : undefined,
       state: state as any,
       glitcoinBorrow: glitcoinBorrow === "" ? undefined : Number(glitcoinBorrow),
@@ -194,6 +197,21 @@ export default function GarmentEditPage() {
                 className="bubble-input bubble-autosize"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
+              />
+            </div>
+          </label>
+
+          <label className="grid gap-1">
+            <span className="bubble-mini-header">Size</span>
+            <div
+              className={`bubble-field ${bubbleEffectsForSeed("edit:size")}`}
+              style={{ ['--bubble-size' as string]: `${Math.min(200, Math.max(92, 72 + String(size ?? "").length * 6))}px` } as React.CSSProperties}
+            >
+              <input
+                className="bubble-input bubble-autosize"
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
+                placeholder="e.g., M, 8, 32x30"
               />
             </div>
           </label>
